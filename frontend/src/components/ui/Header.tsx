@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Flame, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 
 interface HeaderProps {
   greetingName: string;
@@ -42,7 +42,7 @@ export default function Header({ greetingName, streak, onSignOut }: HeaderProps)
             borderColor: streak > 0 ? "rgba(245,151,61,0.35)" : "var(--border)",
           }}
         >
-          <Flame size={16} color={streak > 0 ? "var(--ember-500)" : "var(--text-faint)"} fill={streak > 0 ? "var(--ember-500)" : "none"} />
+          <img src="/favicon.ico" alt="Streak" style={{ width: 16, height: 16, opacity: streak > 0 ? 1 : 0.4 }} />
           <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, fontSize: 14 }}>{streak}</span>
         </div>
         <button

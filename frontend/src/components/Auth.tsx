@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 
 function GoogleIcon() {
@@ -76,7 +76,7 @@ export default function Auth() {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Flame size={20} color="var(--ember-500)" fill="var(--ember-500)" />
+            <img src="/favicon.ico" alt="Embers" style={{ width: 24, height: 24 }} />
             <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 17 }}>Embers</span>
           </div>
           <div>
@@ -98,7 +98,7 @@ export default function Auth() {
         >
           <div style={{ marginBottom: 22 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-              <Flame size={18} color="var(--ember-500)" fill="var(--ember-500)" className="auth-brand-mobile-icon" />
+              <img src="/favicon.ico" alt="Embers" style={{ width: 20, height: 20 }} className="auth-brand-mobile-icon" />
               <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18 }}>Embers</span>
             </div>
             <div style={{ fontSize: 14, color: "var(--text-dim)" }}>
