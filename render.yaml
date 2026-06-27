@@ -1,0 +1,23 @@
+# Root-level Blueprint so Render can deploy this monorepo with one click:
+# Render Dashboard -> New -> Blueprint -> select this repo.
+services:
+  - type: web
+    name: habit-tracker-api
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false

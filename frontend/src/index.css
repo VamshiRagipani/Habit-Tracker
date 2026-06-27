@@ -1,0 +1,309 @@
+/* ==========================================================
+   Design tokens
+   Concept: "Embers" — a quiet near-black workspace with one
+   warm signature (the progress ring) and a cool indigo for
+   action. Everything else stays disciplined and flat.
+   ========================================================== */
+:root {
+  /* surfaces */
+  --bg: #0b0c10;
+  --bg-soft: #0f1116;
+  --surface: #14151b;
+  --surface-2: #1a1c24;
+  --border: #24262f;
+  --border-soft: #1c1e26;
+
+  /* text */
+  --text: #f3f4f6;
+  --text-dim: #9a9ca6;
+  --text-faint: #5b5e68;
+
+  /* accents */
+  --ember-400: #ffb86b;
+  --ember-500: #f5973d;
+  --ember-600: #e2701c;
+  --indigo-400: #9aa0ff;
+  --indigo-500: #7c83fd;
+  --sage-500: #34d399;
+  --red-500: #f87171;
+
+  /* effects */
+  --glow-ember: 0 0 32px rgba(245, 151, 61, 0.28);
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 24px rgba(0, 0, 0, 0.28);
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+
+  /* type */
+  --font-display: "Outfit", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: radial-gradient(ellipse 120% 60% at 50% -10%, #1a1410 0%, var(--bg) 45%) fixed;
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button {
+  font-family: inherit;
+}
+
+textarea,
+input {
+  font-family: inherit;
+}
+
+::selection {
+  background: rgba(245, 151, 61, 0.25);
+}
+
+/* Visible, deliberate focus ring everywhere — accessibility floor */
+:focus-visible {
+  outline: 2px solid var(--indigo-400);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+}
+
+/* ==========================================================
+   Keyframes
+   ========================================================== */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes emberPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(245, 151, 61, 0);
+  }
+  50% {
+    box-shadow: var(--glow-ember);
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 37%, var(--surface) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ==========================================================
+   Layout primitives
+   ========================================================== */
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 20px 16px clamp(40px, 8vh, 80px);
+}
+
+.app-container {
+  width: 100%;
+  max-width: 460px;
+}
+
+/* Desktop: two-column command layout */
+@media (min-width: 980px) {
+  .app-shell {
+    padding: 48px 32px;
+  }
+  .app-container {
+    max-width: 1040px;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+  .app-rail {
+    position: sticky;
+    top: 48px;
+  }
+}
+
+@media (max-width: 979px) {
+  .app-rail {
+    display: contents;
+  }
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.btn {
+  font-weight: 600;
+  font-size: 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, var(--indigo-400), var(--indigo-500));
+  color: #0b0c10;
+  padding: 12px 18px;
+}
+.btn-primary:hover {
+  filter: brightness(1.06);
+}
+
+.btn-google {
+  background: #fff;
+  color: #1f1f1f;
+  padding: 12px 18px;
+  width: 100%;
+}
+.btn-google:hover {
+  background: #f6f6f6;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-dim);
+  padding: 8px 10px;
+}
+.btn-ghost:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.input {
+  width: 100%;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 12px 14px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.input:focus {
+  border-color: var(--indigo-500);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+/* ==========================================================
+   Auth screen
+   ========================================================== */
+.auth-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.auth-grid {
+  width: 100%;
+  max-width: 380px;
+}
+
+.auth-brand {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .auth-grid {
+    max-width: 880px;
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    align-items: stretch;
+    min-height: 520px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-card);
+  }
+  .auth-brand {
+    display: flex;
+  }
+  .auth-card {
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
+
