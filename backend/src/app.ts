@@ -36,6 +36,7 @@ app.use(express.json({ limit: "200kb" }));
 app.use(morgan(env.nodeEnv === "production" ? "combined" : "dev"));
 app.use(rateLimit({ windowMs: 60_000, max: 120 }));
 
+app.get("/", (_req, res) => res.json({ message: "Habit Tracker API — /health to check status" }));
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 app.use("/api/habits", habitsRouter);
