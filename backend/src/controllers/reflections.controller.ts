@@ -3,9 +3,9 @@ import * as reflectionsService from "../services/reflections.service";
 
 export async function getReflections(req: Request, res: Response, next: NextFunction) {
   try {
-    const { limit } = req.query as unknown as { limit: number };
-    const reflections = await reflectionsService.listReflections(req.supabase!, req.user!.id, limit);
-    res.json({ reflections });
+    const { page, limit } = req.query as unknown as { page: number; limit: number };
+    const result = await reflectionsService.listReflections(req.supabase!, req.user!.id, page, limit);
+    res.json(result);
   } catch (err) {
     next(err);
   }

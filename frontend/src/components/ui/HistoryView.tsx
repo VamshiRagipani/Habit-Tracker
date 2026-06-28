@@ -1,4 +1,6 @@
+import { ChangeEvent, useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { api } from "../../lib/apiClient";
 
 interface Bar {
   key: string;
@@ -17,17 +19,48 @@ interface Reflection {
 export default function HistoryView({
   bars,
   total,
-  reflections,
+  refreshKey,
 }: {
   bars: Bar[];
   total: number;
-  reflections: Reflection[];
+  refreshKey: number;
 }) {
+  const [reflections, setReflections] = useState<Reflection[]>([]);
+  const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalReflections, setTotalReflections] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadReflections() {
+      setLoading(true);
+      try {
+        const result = await api.getReflections(currentPage, pageSize);
+        setReflections(result.reflections);
+        setTotalReflections(result.total);
+      } catch (err) {
+        console.error(err);
+        setReflections([]);
+        setTotalReflections(0);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadReflections();
+  }, [currentPage, pageSize, refreshKey]);
+
   const visibleReflections = [...reflections].sort((a, b) => {
     const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
     const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
     return bTime - aTime;
   });
+
+  const totalPages = Math.max(1, Math.ceil(totalReflections / pageSize));
+
+  function handlePageSizeChange(event: React.ChangeEvent<HTMLSelectElement>) {
+    setPageSize(Number(event.target.value));
+    setCurrentPage(1);
+  }
 
   return (
     <div>
@@ -96,28 +129,74 @@ export default function HistoryView({
         Past reflections
       </div>
 
-      {visibleReflections.map((r, i) => (
-        <motion.div
-          key={r.id}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: i * 0.05 }}
-          className="card"
-          style={{ padding: "12px 14px", marginBottom: 8 }}
-        >
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ember-500)", fontWeight: 600, marginBottom: 4 }}>
-            {r.log_date}
-          </div>
-          <div style={{ fontSize: 13.5, color: "var(--text-dim)", lineHeight: 1.5 }}>
-            {r.body || <em style={{ color: "var(--text-faint)" }}>No entry</em>}
-          </div>
-        </motion.div>
-      ))}
-      {visibleReflections.length === 0 && (
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 16 }}>
+        <label style={{ fontSize: 13, color: "var(--text-dim)", display: "flex", alignItems: "center", gap: 8 }}>
+          Items per page:
+          <select
+            className="input"
+            value={pageSize}
+            onChange={handlePageSizeChange}
+            style={{ minWidth: 90, padding: "6px 10px" }}
+          >
+            {[10, 20, 50, 100].map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {loading ? (
         <div style={{ color: "var(--text-faint)", fontSize: 14, textAlign: "center", padding: 24 }}>
-          No reflections yet. Start today.
+          Loading reflections…
         </div>
+      ) : (
+        <> 
+          {visibleReflections.map((r, i) => (
+            <motion.div
+              key={r.id}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className="card"
+              style={{ padding: "12px 14px", marginBottom: 8 }}
+            >
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ember-500)", fontWeight: 600, marginBottom: 4 }}>
+                {r.log_date}
+              </div>
+              <div style={{ fontSize: 13.5, color: "var(--text-dim)", lineHeight: 1.5 }}>
+                {r.body || <em style={{ color: "var(--text-faint)" }}>No entry</em>}
+              </div>
+            </motion.div>
+          ))}
+          {visibleReflections.length === 0 && (
+            <div style={{ color: "var(--text-faint)", fontSize: 14, textAlign: "center", padding: 24 }}>
+              No reflections yet. Start today.
+            </div>
+          )}
+        </>
       )}
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
+        <button
+          className="btn btn-secondary"
+          onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+          disabled={currentPage === 1}
+        >
+          Previous
+        </button>
+        <div style={{ fontSize: 13, color: "var(--text-dim)", fontWeight: 600 }}>
+          Page {currentPage} of {totalPages}
+        </div>
+        <button
+          className="btn btn-secondary"
+          onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+          disabled={currentPage >= totalPages}
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 }

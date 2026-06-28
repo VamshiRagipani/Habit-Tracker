@@ -1,16 +1,22 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "../middleware/errorHandler";
 
-export async function listReflections(supabase: SupabaseClient, userId: string, limit: number) {
-  const { data, error } = await supabase
+export async function listReflections(
+  supabase: SupabaseClient,
+  userId: string,
+  page: number,
+  limit: number
+) {
+  const offset = (page - 1) * limit;
+  const { data, error, count } = await supabase
     .from("reflections")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("user_id", userId)
     .order("log_date", { ascending: false })
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .range(offset, offset + limit - 1);
   if (error) throw new ApiError(500, error.message);
-  return data ?? [];
+  return { reflections: data ?? [], total: count ?? 0 };
 }
 
 export async function getReflectionByDate(supabase: SupabaseClient, userId: string, logDate: string) {
