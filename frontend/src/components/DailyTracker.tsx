@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../lib/apiClient";
 import { supabase } from "../lib/supabaseClient";
 import Header from "./ui/Header";
+import DayEndTimer from "./ui/DayEndTimer";
 import WeekBanner from "./ui/WeekBanner";
 import NavTabs, { ViewKey } from "./ui/NavTabs";
 import HabitCard from "./ui/HabitCard";
@@ -14,7 +15,15 @@ import Toast from "./ui/Toast";
 import DashboardSkeleton from "./ui/Skeleton";
 
 function getTodayKey() {
-  return new Date().toISOString().split("T")[0];
+  // Compute current date in IST (UTC+5:30) regardless of client timezone
+  const now = new Date();
+  const nowUtcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const istOffsetMs = (5 * 60 + 30) * 60 * 1000; // 5 hours 30 minutes
+  const ist = new Date(nowUtcMs + istOffsetMs);
+  const y = ist.getUTCFullYear();
+  const m = String(ist.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(ist.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 export default function DailyTracker() {
@@ -63,9 +72,10 @@ export default function DailyTracker() {
 
   useEffect(() => {
     if (!history) return;
-    const todays = history.reflections.find((r: any) => r.log_date === todayKey);
+    const key = getTodayKey();
+    const todays = history.reflections.find((r: any) => r.log_date === key);
     setReflectionText(todays ? todays.body : "");
-  }, [history, todayKey]);
+  }, [history]);
 
   async function toggle(habitId: string) {
     setDashboard((prev: any) => {
@@ -76,7 +86,7 @@ export default function DailyTracker() {
       return { ...prev, habits, doneCount, pct };
     });
     try {
-      await api.toggleLog(habitId, todayKey);
+      await api.toggleLog(habitId, getTodayKey());
       await Promise.all([loadDashboard(), loadHistory()]);
     } catch (err: any) {
       setErrorMsg(err.message || "Couldn't save that — try again.");
@@ -86,7 +96,7 @@ export default function DailyTracker() {
 
   async function saveReflection() {
     try {
-      await api.saveReflection(todayKey, reflectionText);
+      await api.saveReflection(getTodayKey(), reflectionText);
       await loadHistory();
     } catch (err: any) {
       setErrorMsg(err.message || "Couldn't save your reflection.");
@@ -148,17 +158,16 @@ export default function DailyTracker() {
             className="card"
             style={{ display: "flex", alignItems: "center", gap: 20, padding: 20, marginTop: 16 }}
           >
-            <ProgressRing pct={pct} done={doneCount} total={HABITS.length} />
-            <div>
-              <div style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 700, letterSpacing: -0.5 }}>
-                {doneCount}/{HABITS.length}
-              </div>
-              <div style={{ fontSize: 13, color: "var(--text-dim)" }}>habits done</div>
-              {doneCount === HABITS.length && HABITS.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+              <ProgressRing pct={pct} done={doneCount} total={HABITS.length} />
+              <DayEndTimer compact />
+            </div>
+            <div style={{ minWidth: 140 }}>
+              {doneCount === HABITS.length && HABITS.length > 0 ? (
                 <div style={{ fontSize: 13, color: "var(--ember-500)", marginTop: 4, fontWeight: 600 }}>
                   🔥 Full day!
                 </div>
-              )}
+              ) : null}
             </div>
           </motion.div>
 
