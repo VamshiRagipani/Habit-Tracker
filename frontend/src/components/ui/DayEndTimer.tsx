@@ -22,7 +22,7 @@ function formatMsHoursMinutes(ms: number) {
   const totalSec = Math.floor(ms / 1000);
   const hrs = Math.floor(totalSec / 3600);
   const mins = Math.floor((totalSec % 3600) / 60);
-  return [hrs, mins].map((n) => String(n).padStart(2, "0")).join(":");
+  return `${hrs}h ${mins} mins`;
 }
 
 export default function DayEndTimer({ compact }: { compact?: boolean }) {
@@ -40,19 +40,18 @@ export default function DayEndTimer({ compact }: { compact?: boolean }) {
   if (compact) {
     const timeStr = formatMsHoursMinutes(remainingMs);
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6 }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
         <div style={{ fontSize: 12, color: "var(--text-dim)", fontWeight: 700, textTransform: "uppercase" }}>
           Time left today
         </div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
           <div
             aria-label="time-until-day-end"
             title="Day ends in IST"
-            style={{ fontSize: 44, fontWeight: 900, color: "white", lineHeight: 1 }}
+            style={{ fontSize: 27, fontWeight: 900, color: "white", lineHeight: 1.1, letterSpacing: -0.5, whiteSpace: "nowrap" }}
           >
             {timeStr}
           </div>
-          <div style={{ fontSize: 12, color: "var(--text-dim)", fontWeight: 700, marginTop: 6 }}>HH:MM</div>
         </div>
       </div>
     );
@@ -99,6 +98,7 @@ export default function DayEndTimer({ compact }: { compact?: boolean }) {
             letterSpacing: 0.6,
             textShadow: "0 2px 8px rgba(0,0,0,0.6)",
             background: "linear-gradient(180deg, rgba(0,0,0,0.24), rgba(0,0,0,0.36))",
+            whiteSpace: "nowrap",
           }}
         >
           {formatMsHoursMinutes(remainingMs)}

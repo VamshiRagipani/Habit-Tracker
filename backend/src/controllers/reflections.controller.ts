@@ -14,7 +14,7 @@ export async function getReflections(req: Request, res: Response, next: NextFunc
 export async function postReflection(req: Request, res: Response, next: NextFunction) {
   try {
     const { log_date, body } = req.body;
-    const reflection = await reflectionsService.upsertReflection(req.supabase!, req.user!.id, log_date, body);
+    const reflection = await reflectionsService.createReflection(req.supabase!, req.user!.id, log_date, body);
     res.json({ reflection });
   } catch (err) {
     next(err);
