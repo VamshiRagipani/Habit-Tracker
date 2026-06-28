@@ -11,6 +11,7 @@ interface Reflection {
   id: string;
   log_date: string;
   body: string;
+  created_at?: string;
 }
 
 export default function HistoryView({
@@ -22,6 +23,12 @@ export default function HistoryView({
   total: number;
   reflections: Reflection[];
 }) {
+  const visibleReflections = [...reflections].sort((a, b) => {
+    const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return bTime - aTime;
+  });
+
   return (
     <div>
       <div className="card" style={{ padding: 18 }}>
@@ -89,7 +96,7 @@ export default function HistoryView({
         Past reflections
       </div>
 
-      {reflections.map((r, i) => (
+      {visibleReflections.map((r, i) => (
         <motion.div
           key={r.id}
           initial={{ opacity: 0, y: 6 }}
@@ -106,7 +113,7 @@ export default function HistoryView({
           </div>
         </motion.div>
       ))}
-      {reflections.length === 0 && (
+      {visibleReflections.length === 0 && (
         <div style={{ color: "var(--text-faint)", fontSize: 14, textAlign: "center", padding: 24 }}>
           No reflections yet. Start today.
         </div>

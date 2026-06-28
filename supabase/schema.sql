@@ -73,7 +73,7 @@ create policy "logs_delete_own" on public.daily_logs for delete using (auth.uid(
 create index if not exists idx_daily_logs_user_date on public.daily_logs (user_id, log_date);
 
 -- ---------------------------------------------------------
--- REFLECTIONS (one row per day)
+-- REFLECTIONS (one row per saved reflection entry)
 -- ---------------------------------------------------------
 create table if not exists public.reflections (
   id uuid primary key default gen_random_uuid(),
@@ -81,11 +81,26 @@ create table if not exists public.reflections (
   log_date date not null,
   body text not null default '',
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (user_id, log_date)
+  updated_at timestamptz not null default now()
 );
 
 alter table public.reflections enable row level security;
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.reflections'::regclass
+      and conname = 'reflections_user_id_log_date_key'
+  ) then
+    alter table public.reflections drop constraint reflections_user_id_log_date_key;
+  end if;
+end
+$$;
+
+create index if not exists idx_reflections_user_date_created
+  on public.reflections (user_id, log_date, created_at desc);
 
 create policy "reflections_select_own" on public.reflections for select using (auth.uid() = user_id);
 create policy "reflections_insert_own" on public.reflections for insert with check (auth.uid() = user_id);

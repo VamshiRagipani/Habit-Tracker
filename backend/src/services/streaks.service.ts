@@ -7,9 +7,13 @@ function isoDate(d: Date) {
 }
 
 /**
- * Same rule as the original frontend: a day "counts" toward the streak
- * if at least half the habits were completed. Walks backwards from today
- * until it finds a day that breaks the streak.
+ * A day counts toward the streak when the user completes at least half of
+ * the active habits for that day. It does not require completing every habit.
+ *
+ * Examples:
+ *   6 habits -> threshold 3
+ *   5 habits -> threshold 3
+ *   4 habits -> threshold 2
  */
 export async function computeStreak(supabase: SupabaseClient, userId: string, windowDays = 60) {
   const habits = await listHabits(supabase, userId);
@@ -26,7 +30,7 @@ export async function computeStreak(supabase: SupabaseClient, userId: string, wi
     byDate[log.log_date].add(log.habit_id);
   }
 
-  const threshold = Math.ceil(habits.length / 2);
+  const threshold = habits.length > 0 ? Math.ceil(habits.length / 2) : 1;
   let streak = 0;
   for (let i = 0; i < windowDays; i++) {
     const d = new Date(today);

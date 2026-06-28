@@ -7,6 +7,7 @@ export async function listReflections(supabase: SupabaseClient, userId: string, 
     .select("*")
     .eq("user_id", userId)
     .order("log_date", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw new ApiError(500, error.message);
   return data ?? [];
@@ -23,7 +24,7 @@ export async function getReflectionByDate(supabase: SupabaseClient, userId: stri
   return data;
 }
 
-export async function upsertReflection(
+export async function createReflection(
   supabase: SupabaseClient,
   userId: string,
   logDate: string,
@@ -31,7 +32,7 @@ export async function upsertReflection(
 ) {
   const { data, error } = await supabase
     .from("reflections")
-    .upsert({ user_id: userId, log_date: logDate, body }, { onConflict: "user_id,log_date" })
+    .insert({ user_id: userId, log_date: logDate, body })
     .select()
     .single();
   if (error) throw new ApiError(400, error.message);

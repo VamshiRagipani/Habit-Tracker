@@ -70,13 +70,6 @@ export default function DailyTracker() {
     })();
   }, [loadDashboard, loadHistory]);
 
-  useEffect(() => {
-    if (!history) return;
-    const key = getTodayKey();
-    const todays = history.reflections.find((r: any) => r.log_date === key);
-    setReflectionText(todays ? todays.body : "");
-  }, [history]);
-
   async function toggle(habitId: string) {
     setDashboard((prev: any) => {
       if (!prev) return prev;
@@ -98,6 +91,7 @@ export default function DailyTracker() {
     try {
       await api.saveReflection(getTodayKey(), reflectionText);
       await loadHistory();
+      setReflectionText("");
     } catch (err: any) {
       setErrorMsg(err.message || "Couldn't save your reflection.");
       throw err;
