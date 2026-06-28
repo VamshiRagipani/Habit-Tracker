@@ -1,152 +1,193 @@
-# Habit Tracker — Production Revision
+# Embers — Habit Tracker
 
-## What was actually breaking on Render
+Embers is a polished, daily habit tracking app designed to help users build consistency through small actions. The experience combines a calm, modern UI with practical progress tracking, streaks, reflections, and weekly planning.
 
-Every API request in production was throwing this in your Render logs:
+## Overview
 
+This project is a full-stack web application with:
+
+- A React + TypeScript frontend for the daily habit experience
+- An Express + TypeScript backend for API logic and business rules
+- Supabase for authentication, database storage, and real-time-friendly data access
+- A clean, motivating interface that emphasizes progress over perfection
+
+## Key Features
+
+- Secure sign-in with Supabase Auth using Google or email/password
+- Daily habit tracking with one-tap completion
+- Progress visualization through a circular progress indicator
+- Streak tracking based on consecutive successful days
+- Reflection journaling for each day
+- Weekly planning and focus prompts
+- History view to review previous performance
+- Responsive design optimized for both mobile and desktop experiences
+
+## Streak Logic
+
+The streak system rewards consistency without requiring users to complete every habit every day. A day counts as successful when the user completes at least 50% of today’s habits, rounded up.
+
+Example:
+- 6 habits → required: 3 completed
+- 5 habits → required: 3 completed
+- 4 habits → required: 2 completed
+
+If the completed count is below that threshold, the streak resets to zero.
+
+## Tech Stack
+
+### Frontend
+- React
+- TypeScript
+- Vite
+- Framer Motion for animations
+- Lucide React for icons
+- Supabase JS client
+
+### Backend
+- Express
+- TypeScript
+- Zod for validation
+- Helmet, CORS, and rate limiting
+- Supabase JS server client
+
+### Data & Auth
+- Supabase PostgreSQL
+- Supabase Auth
+- SQL schema included in the repository
+
+## Project Structure
+
+```text
+backend/
+  src/
+    controllers/
+    middleware/
+    routes/
+    services/
+    schemas/
+    config/
+    types/
+frontend/
+  src/
+    components/
+    lib/
+    App.tsx
+    main.tsx
+supabase/
+  schema.sql
 ```
-ValidationError: The 'X-Forwarded-For' header is set but the Express
-'trust proxy' setting is false (default)... ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 20+
+- npm
+- A Supabase project
+
+### 1. Clone the repository
+
+```bash
+git clone <your-repo-url>
+cd habit-tracker-app
 ```
 
-Render's load balancer sits in front of your app and adds an `X-Forwarded-For`
-header to every request. `express-rate-limit` v7 refuses to trust that header
-unless Express is explicitly told it's behind a proxy — so **every single
-request** (not just over the rate limit) was erroring. This never shows up
-locally because there's no proxy in front of `localhost`. Fixed with one line
-in `backend/src/app.ts`:
+### 2. Install dependencies
 
-```ts
-app.set("trust proxy", 1);
+```bash
+# Backend
+cd backend
+npm install
+
+# Frontend
+cd ../frontend
+npm install
 ```
 
-Other fixes made at the same time:
-- Removed a duplicate/conflicting Express type augmentation file that could
-  cause flaky `tsc` builds (`backend/src/types/ambient.d.ts` was redundant
-  with `types/index.ts`).
-- Simplified `tsconfig.json` back to plain CommonJS (it had drifted to a
-  `Node16` module setting with a duplicated `lib` key — harmless most of the
-  time, but unnecessary fragility).
-- `env.ts` now fails with a clear, readable message naming the exact missing
-  variable instead of a bare stack trace, so future misconfiguration is easy
-  to diagnose from Render's log viewer.
-- Added a **root-level `render.yaml`** with `rootDir: backend`, so you can
-  deploy via Render's "New → Blueprint" in one click without manually setting
-  the root directory (kept `backend/render.yaml` too, for manual setup).
-- Kept your `--include=dev` / `NPM_CONFIG_PRODUCTION=false` build safeguard —
-  that was a real, separate issue you'd already caught (Render can skip
-  devDependencies like `typescript` based on `NODE_ENV`, breaking the build).
-- CORS no longer sets `credentials: true` (unused — auth is bearer-token
-  based, not cookie based) and Helmet now explicitly allows cross-origin
-  resource reads, which is correct for a public API serving a separate
-  frontend origin.
-- Confirmed `backend/.env` / `frontend/.env` were never actually committed to
-  git (your `.gitignore` was already correct) — your Supabase anon key was
-  never exposed on GitHub. (Anon keys are safe to ship in a frontend bundle
-  by design — Row Level Security is what actually protects the data — but
-  it's still good hygiene to keep `.env` untracked, which it already was.)
+### 3. Configure environment variables
 
-All of this was verified by actually building and booting both apps, and
-simulating Render's proxy headers against the compiled backend.
+Create environment files for both apps.
 
----
+#### Backend
+Create a file named `.env` inside the backend folder with:
 
-## What changed in the UI
+```env
+SUPABASE_URL=your-supabase-url
+SUPABASE_ANON_KEY=your-supabase-anon-key
+CORS_ORIGIN=http://localhost:5173
+```
 
-Same data and behavior, full visual rebuild:
+#### Frontend
+Create a file named `.env` inside the frontend folder with:
 
-- **New design system** (`frontend/src/index.css`): a near-black workspace
-  with one warm signature color (ember/amber, used for the progress ring and
-  streak) and a cool indigo for actions — not a generic dark template.
-  Three-tier type system: **Outfit** for display text, **Inter** for body,
-  **IBM Plex Mono** for numbers/dates (streak count, percentages, history).
-- **Responsive**: single column on mobile; a sticky two-column "command
-  layout" on desktop (≥980px) with the progress ring + week focus pinned on
-  the left, content on the right. One codebase, no separate mobile view.
-- **Motion** (Framer Motion): page-load stagger, a sliding active-tab
-  indicator, an animated progress ring that eases to its new value, a
-  spring-in checkmark on habit completion, animated history bars, toast
-  errors that slide in. `prefers-reduced-motion` is respected globally.
-- **Google one-click sign-in**, plus the original email/password as a
-  fallback (see setup below — this part needs a few minutes in your own
-  Google Cloud Console, which only you can do).
-- Loading state is a real skeleton matching the layout, not a "Loading…"
-  string. Errors surface as a dismissable toast instead of replacing the
-  page. The API client now retries with backoff if the Render free instance
-  is asleep, instead of surfacing a cold-start as an error.
-- Component structure: `components/ui/` now holds `ProgressRing`, `Header`,
-  `WeekBanner`, `NavTabs`, `HabitCard`, `ReflectionPanel`, `HistoryView`,
-  `PlanView`, `Toast`, `Skeleton` — `DailyTracker.tsx` is now a thin
-  orchestrator instead of one large file.
+```env
+VITE_API_URL=http://localhost:4000
+VITE_SUPABASE_URL=your-supabase-url
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+```
 
----
+### 4. Run locally
 
-## Set up Google sign-in (one-time, ~5 minutes)
+```bash
+# Backend
+cd backend
+npm run dev
+```
 
-This part needs your own Google account — I can't create these credentials
-for you.
+In a second terminal:
 
-1. **Google Cloud Console** → console.cloud.google.com → create/select a
-   project → **APIs & Services → OAuth consent screen**. Choose "External",
-   fill in app name + your email, save.
-2. **APIs & Services → Credentials → Create Credentials → OAuth client ID**
-   → Application type: **Web application**.
-   - **Authorized JavaScript origins**: add `http://localhost:5173` and your
-     Vercel URL, e.g. `https://your-app.vercel.app`.
-   - **Authorized redirect URIs**: add your Supabase callback URL —
-     `https://YOUR_PROJECT_REF.supabase.co/auth/v1/callback` (find this exact
-     value in Supabase → Authentication → Providers → Google, it's shown for
-     you to copy).
-   - Save → copy the **Client ID** and **Client Secret**.
-3. **Supabase Dashboard → Authentication → Providers → Google** → toggle on
-   → paste the Client ID and Client Secret → Save.
-4. **Supabase Dashboard → Authentication → URL Configuration** → set **Site
-   URL** to your Vercel URL, and add both `http://localhost:5173` and your
-   Vercel URL under **Redirect URLs**.
-5. Done — the "Continue with Google" button in `Auth.tsx` already calls
-   `supabase.auth.signInWithOAuth({ provider: "google" })`; no frontend code
-   changes needed once the provider is configured.
+```bash
+# Frontend
+cd frontend
+npm run dev
+```
 
----
+The frontend will run at `http://localhost:5173` and the backend at `http://localhost:4000`.
 
-## Deploy — Render (backend)
+## Database Setup
 
-1. Push this repo to GitHub (root now has a `render.yaml`).
-2. Render dashboard → **New → Blueprint** → select the repo → it reads
-   `render.yaml` and proposes `habit-tracker-api` with `rootDir: backend`
-   already set.
-3. Fill in the three `sync: false` env vars when prompted: `SUPABASE_URL`,
-   `SUPABASE_ANON_KEY`, `CORS_ORIGIN` (your Vercel URL — you can use `*`
-   temporarily, then tighten it after the frontend is deployed).
-4. Deploy. Check `https://your-api.onrender.com/health` → `{"ok":true}`.
+Run the SQL from [supabase/schema.sql](supabase/schema.sql) in your Supabase SQL editor to create the required tables, row-level security policies, and user bootstrap logic.
 
-(Prefer manual setup instead of Blueprint? Create the Web Service yourself,
-set **Root Directory** to `backend`, and the same build/start commands from
-`backend/render.yaml` apply.)
+## Deployment
 
-## Deploy — Vercel (frontend)
+### Backend
+This project includes deployment configuration for Render.
 
+- Use the provided [render.yaml](render.yaml) file
+- Set the required environment variables in your Render service
+- Deploy the backend from the repository root or the backend folder depending on your setup
+
+### Frontend
+The frontend is ready for deployment on Vercel or any static hosting platform.
+
+- Connect the repository
+- Set the frontend root directory to `frontend`
+- Add the frontend environment variables in your hosting dashboard
+
+## Scripts
+
+### Backend
+```bash
+cd backend
+npm run dev      # start development server
+npm run build    # compile TypeScript
+npm run start    # run production build
+```
+
+### Frontend
 ```bash
 cd frontend
-npm install
-vercel
+npm run dev      # start Vite dev server
+npm run build    # create production build
+npm run preview  # preview production build locally
 ```
 
-Or import the repo in the Vercel dashboard with **Root Directory** set to
-`frontend`. Add the three env vars (`VITE_API_URL`, `VITE_SUPABASE_URL`,
-`VITE_SUPABASE_ANON_KEY`) in Project Settings → Environment Variables.
+## Notes
 
----
+- The app is intentionally designed around sustainable habits rather than perfection.
+- The streak feature is based on progress consistency, not strict all-or-nothing completion.
+- The current UI and copy are tailored around a calm, focused daily routine experience.
 
-## Local development
+## License
 
-```bash
-# backend
-cd backend && npm install && npm run dev      # http://localhost:4000
-
-# frontend (new terminal)
-cd frontend && npm install && npm run dev     # http://localhost:5173
-```
-
-Both `.env` files already exist with your real Supabase project values from
-your last upload, so this should run immediately.
+This project is intended for personal or educational use unless otherwise specified by the repository owner.
