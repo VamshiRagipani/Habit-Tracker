@@ -16,11 +16,7 @@ export default function ProgressRing({ pct, done, total, size = 132 }: ProgressR
   const complete = done === total && total > 0;
 
   return (
-    <div
-      style={{ width: size, height: size, position: "relative" }}
-      role="img"
-      aria-label={`${done} of ${total} habits done today, ${pct}%`}
-    >
+    <div style={{ width: size, height: size, position: "relative" }} role="img" aria-label={`${pct}% complete`}>
       <motion.div
         animate={complete ? { boxShadow: ["0 0 0 rgba(245,151,61,0)", "0 0 36px rgba(245,151,61,0.4)", "0 0 0 rgba(245,151,61,0)"] } : {}}
         transition={{ duration: 2.4, repeat: complete ? Infinity : 0, ease: "easeInOut" }}
@@ -59,10 +55,10 @@ export default function ProgressRing({ pct, done, total, size = 132 }: ProgressR
           justifyContent: "center",
         }}
       >
-        <span style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 700, lineHeight: 1 }}>
+        <span style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 700, lineHeight: 1 }}>
           {pct}%
         </span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-dim)", marginTop: 4 }}>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-dim)", marginTop: 6 }}>
           {done}/{total}
         </span>
       </div>
