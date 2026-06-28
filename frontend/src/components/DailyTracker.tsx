@@ -31,6 +31,7 @@ export default function DailyTracker() {
 
   const [dashboard, setDashboard] = useState<any>(null);
   const [history, setHistory] = useState<any>(null);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const [greetingName, setGreetingName] = useState("");
 
   const [view, setView] = useState<ViewKey>("today");
@@ -90,7 +91,7 @@ export default function DailyTracker() {
   async function saveReflection() {
     try {
       await api.saveReflection(getTodayKey(), reflectionText);
-      await loadHistory();
+      setHistoryRefreshKey((value) => value + 1);
       setReflectionText("");
     } catch (err: any) {
       setErrorMsg(err.message || "Couldn't save your reflection.");
@@ -189,7 +190,13 @@ export default function DailyTracker() {
                 </div>
               )}
 
-              {view === "history" && <HistoryView bars={bars} total={HABITS.length} reflections={reflections} />}
+              {view === "history" && (
+                <HistoryView
+                  bars={bars}
+                  total={HABITS.length}
+                  refreshKey={historyRefreshKey}
+                />
+              )}
 
               {view === "plan" && <PlanView weekGoals={weekGoals} currentWeek={currentWeek} />}
             </motion.div>

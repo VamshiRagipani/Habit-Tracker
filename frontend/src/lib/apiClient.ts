@@ -89,7 +89,7 @@ export const api = {
     }),
 
   // Reflections (CRUD)
-  getReflections: (limit = 5) => authedFetch(`/api/reflections?limit=${limit}`),
+  getReflections: (page = 1, limit = 10) => authedFetch(`/api/reflections?page=${page}&limit=${limit}`),
   saveReflection: (logDate: string, body: string) =>
     authedFetch("/api/reflections", {
       method: "POST",

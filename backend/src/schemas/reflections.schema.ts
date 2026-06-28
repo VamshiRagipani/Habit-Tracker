@@ -8,5 +8,6 @@ export const upsertReflectionSchema = z.object({
 });
 
 export const listReflectionsQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(100).default(5),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(10),
 });
