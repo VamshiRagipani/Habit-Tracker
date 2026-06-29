@@ -15,7 +15,7 @@ function GoogleIcon() {
 }
 
 export default function Auth() {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "reset">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -46,10 +46,16 @@ export default function Auth() {
       if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) setError(error.message);
-      } else {
+      } else if (mode === "signup") {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) setError(error.message);
         else setInfo("Check your email to confirm your account, then sign in.");
+      } else {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin,
+        });
+        if (error) setError(error.message);
+        else setInfo("Check your email for password reset instructions.");
       }
     } finally {
       setLoading(false);
@@ -135,16 +141,18 @@ export default function Auth() {
               required
               autoComplete="email"
             />
-            <input
-              className="input"
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
-            />
+            {mode !== "reset" ? (
+              <input
+                className="input"
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                autoComplete={mode === "signin" ? "current-password" : "new-password"}
+              />
+            ) : null}
 
             <AnimatePresence>
               {error && (
@@ -172,22 +180,51 @@ export default function Auth() {
             </AnimatePresence>
 
             <button type="submit" className="btn btn-primary" disabled={loading} style={{ marginTop: 4 }}>
-              {loading ? <Loader2 size={16} className="spin" /> : mode === "signin" ? "Sign in" : "Create account"}
+              {loading ? (
+                <Loader2 size={16} className="spin" />
+              ) : mode === "signin" ? (
+                "Sign in"
+              ) : mode === "signup" ? (
+                "Create account"
+              ) : (
+                "Send reset email"
+              )}
             </button>
           </form>
 
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={() => {
-              setMode(mode === "signin" ? "signup" : "signin");
-              setError("");
-              setInfo("");
-            }}
-            style={{ marginTop: 14, fontSize: 12.5 }}
-          >
-            {mode === "signin" ? "Need an account? Sign up" : "Have an account? Sign in"}
-          </button>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 14 }}>
+            {mode === "signin" ? (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  setMode("reset");
+                  setError("");
+                  setInfo("");
+                }}
+                style={{ fontSize: 12.5 }}
+              >
+                Forgot password?
+              </button>
+            ) : null}
+
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => {
+                setMode(mode === "signin" ? "signup" : "signin");
+                setError("");
+                setInfo("");
+              }}
+              style={{ fontSize: 12.5 }}
+            >
+              {mode === "signin"
+                ? "Need an account? Sign up"
+                : mode === "signup"
+                ? "Have an account? Sign in"
+                : "Back to sign in"}
+            </button>
+          </div>
         </div>
       </motion.div>
     </div>
