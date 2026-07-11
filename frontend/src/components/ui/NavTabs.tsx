@@ -30,10 +30,13 @@ export default function NavTabs({ view, onChange }: { view: ViewKey; onChange: (
             style={{
               flex: 1,
               position: "relative",
-              padding: "9px 0",
+              padding: "10px 8px",
               background: "transparent",
               color: active ? "var(--text)" : "var(--text-dim)",
               zIndex: 1,
+              fontSize: "clamp(12px, 3vw, 13px)",
+              minHeight: "auto",
+              minWidth: 0,
             }}
           >
             {active && (
@@ -49,8 +52,10 @@ export default function NavTabs({ view, onChange }: { view: ViewKey; onChange: (
                 }}
               />
             )}
-            <Icon size={14} style={{ marginRight: 6 }} />
-            {tab.label}
+            <Icon size={13} style={{ marginRight: 4, flexShrink: 0 }} />
+            <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {tab.label}
+            </span>
           </button>
         );
       })}

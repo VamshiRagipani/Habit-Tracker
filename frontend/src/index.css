@@ -148,18 +148,25 @@ input {
 }
 
 /* ==========================================================
-   Layout primitives
+   Layout primitives — MOBILE FIRST
    ========================================================== */
 .app-shell {
   min-height: 100vh;
   display: flex;
   justify-content: center;
-  padding: 20px 16px clamp(40px, 8vh, 80px);
+  padding: 12px 14px 40px;
 }
 
 .app-container {
   width: 100%;
   max-width: 460px;
+}
+
+/* Tablet optimization */
+@media (min-width: 640px) {
+  .app-shell {
+    padding: 20px 16px 60px;
+  }
 }
 
 /* Desktop: two-column command layout */
@@ -195,7 +202,7 @@ input {
 
 .btn {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   cursor: pointer;
@@ -205,6 +212,8 @@ input {
   gap: 8px;
   transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
   -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
+  padding: 12px 16px;
 }
 .btn:active {
   transform: scale(0.97);
@@ -228,6 +237,7 @@ input {
   color: #1f1f1f;
   padding: 12px 18px;
   width: 100%;
+  font-size: 14px;
 }
 .btn-google:hover {
   background: #f6f6f6;
@@ -237,6 +247,7 @@ input {
   background: transparent;
   color: var(--text-dim);
   padding: 8px 10px;
+  min-height: auto;
 }
 .btn-ghost:hover {
   color: var(--text);
@@ -249,10 +260,12 @@ input {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text);
-  padding: 12px 14px;
-  font-size: 14px;
+  padding: 14px 14px;
+  font-size: 16px;
   outline: none;
   transition: border-color 0.15s ease;
+  min-height: 44px;
+  font-family: inherit;
 }
 .input:focus {
   border-color: var(--indigo-500);
@@ -267,19 +280,79 @@ input {
 }
 
 /* ==========================================================
-   Auth screen
+   Messages and feedback
+   ========================================================== */
+.error-message {
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  color: #fca5a5;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.info-message {
+  background: rgba(156, 160, 255, 0.1);
+  border: 1px solid rgba(156, 160, 255, 0.3);
+  color: #c7cbff;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.toast {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+@media (min-width: 640px) {
+  .toast {
+    bottom: 20px;
+    left: 20px;
+    right: auto;
+  }
+}
+
+/* ==========================================================
+   Responsive typography and spacing adjustments
+   ========================================================== */
+@media (max-width: 480px) {
+  .card {
+    border-radius: var(--radius-md);
+  }
+  
+  /* Compact spacing on very small screens */
+  textarea.input {
+    min-height: 80px;
+  }
+}
+
+/* ==========================================================
+   Auth screen — MOBILE FIRST
    ========================================================== */
 .auth-shell {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px;
+  padding: 16px 14px;
 }
 
 .auth-grid {
   width: 100%;
-  max-width: 380px;
+  max-width: 100%;
+  padding: 20px;
+}
+
+.auth-card {
+  padding: 20px !important;
+  max-width: 100% !important;
 }
 
 .auth-brand {
@@ -296,6 +369,7 @@ input {
     border-radius: var(--radius-lg);
     overflow: hidden;
     box-shadow: var(--shadow-card);
+    padding: 0;
   }
   .auth-brand {
     display: flex;

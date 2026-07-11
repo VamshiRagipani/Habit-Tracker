@@ -36,30 +36,44 @@ export default function HabitCard({
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        padding: "14px 16px",
+        padding: "14px 14px",
         marginBottom: 8,
         cursor: "pointer",
         borderColor: done ? "rgba(52,211,153,0.3)" : "var(--border)",
         background: done ? "rgba(52,211,153,0.06)" : "var(--surface)",
         transition: "background 0.25s ease, border-color 0.25s ease",
+        minHeight: "56px",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-        <span style={{ fontSize: 22, minWidth: 26, flexShrink: 0 }}>{habit.icon}</span>
-        <div style={{ minWidth: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: 1 }}>
+        <span style={{ fontSize: 20, minWidth: 24, flexShrink: 0, lineHeight: 1 }}>{habit.icon}</span>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <div
             style={{
-              fontSize: 14,
+              fontSize: "clamp(13px, 4vw, 14px)",
               fontWeight: 600,
               marginBottom: 2,
               color: done ? "var(--text-dim)" : "var(--text)",
               textDecoration: done ? "line-through" : "none",
+              wordBreak: "break-word",
             }}
           >
             {habit.label}
           </div>
           {habit.detail && (
-            <div style={{ fontSize: 12, color: "var(--text-faint)" }}>{habit.detail}</div>
+            <div
+              style={{
+                fontSize: 11,
+                color: "var(--text-faint)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+              }}
+            >
+              {habit.detail}
+            </div>
           )}
         </div>
       </div>
@@ -79,6 +93,7 @@ export default function HabitCard({
           alignItems: "center",
           justifyContent: "center",
           flexShrink: 0,
+          marginLeft: 8,
         }}
       >
         {done && (
