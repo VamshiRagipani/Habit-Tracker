@@ -82,17 +82,37 @@ export default function App() {
       setShowRecovery(true);
     }
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setCheckingSession(false);
-    });
+    let isMounted = true;
+    const fallbackTimer = window.setTimeout(() => {
+      if (isMounted) {
+        setSession(null);
+        setCheckingSession(false);
+      }
+    }, 2200);
+
+    supabase.auth.getSession()
+      .then(({ data }) => {
+        if (!isMounted) return;
+        setSession(data.session ?? null);
+        setCheckingSession(false);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setSession(null);
+        setCheckingSession(false);
+      });
 
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (!isMounted) return;
       setSession(newSession);
       setCheckingSession(false);
     });
 
-    return () => subscription.subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      window.clearTimeout(fallbackTimer);
+      subscription.subscription.unsubscribe();
+    };
   }, []);
 
   if (checkingSession) {

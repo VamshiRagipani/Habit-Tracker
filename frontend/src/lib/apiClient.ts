@@ -1,9 +1,17 @@
 import { supabase } from "./supabaseClient";
 
-const API_URL = import.meta.env.VITE_API_URL as string;
+const DEFAULT_LOCAL_API_URL = "http://localhost:4000";
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getApiBaseUrls(): string[] {
+  const configured = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
+  const candidates = [configured, ...(import.meta.env.DEV ? [DEFAULT_LOCAL_API_URL] : [])].filter(
+    (value): value is string => Boolean(value)
+  );
+  return [...new Set(candidates)];
 }
 
 /**
@@ -16,41 +24,48 @@ async function authedFetch(path: string, options: RequestInit = {}, attempt = 0)
   const token = data.session?.access_token;
   if (!token) throw new Error("Not authenticated");
 
-  let res: Response;
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60_000);
-    res = await fetch(`${API_URL}${path}`, {
-      ...options,
-      signal: controller.signal,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        ...(options.headers || {}),
-      },
-    });
-    clearTimeout(timeout);
-  } catch (err) {
-    if (attempt < 2) {
-      await sleep(1500 * (attempt + 1));
-      return authedFetch(path, options, attempt + 1);
+  const baseUrls = getApiBaseUrls();
+  let lastError: Error | null = null;
+
+  for (const baseUrl of baseUrls) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60_000);
+      const res = await fetch(`${baseUrl}${path}`, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          ...(options.headers || {}),
+        },
+      });
+      clearTimeout(timeout);
+
+      if (res.status >= 500 && attempt < 2) {
+        await sleep(1500 * (attempt + 1));
+        return authedFetch(path, options, attempt + 1);
+      }
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Request failed (${res.status})`);
+      }
+      if (res.status === 204) return null;
+      return res.json();
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error("Request failed");
     }
-    throw new Error(
-      "Can't reach the server. It may be waking up from sleep — try again in a few seconds."
-    );
   }
 
-  if (res.status >= 500 && attempt < 2) {
+  if (attempt < 2) {
     await sleep(1500 * (attempt + 1));
     return authedFetch(path, options, attempt + 1);
   }
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `Request failed (${res.status})`);
-  }
-  if (res.status === 204) return null;
-  return res.json();
+  throw new Error(
+    lastError?.message || "Can't reach the server. It may be waking up from sleep — try again in a few seconds."
+  );
 }
 
 export const api = {

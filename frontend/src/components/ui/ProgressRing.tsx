@@ -15,14 +15,26 @@ export default function ProgressRing({ pct, done, total, size = 132 }: ProgressR
   const offset = circ - (pct / 100) * circ;
   const complete = done === total && total > 0;
 
+  // Responsive sizing: clamp between 100px and 140px
+  const responsiveSize = Math.max(100, Math.min(size, 140));
+
   return (
-    <div style={{ width: size, height: size, position: "relative" }} role="img" aria-label={`${pct}% complete`}>
+    <div
+      style={{
+        width: responsiveSize,
+        height: responsiveSize,
+        position: "relative",
+        margin: "0 auto",
+      }}
+      role="img"
+      aria-label={`${pct}% complete`}
+    >
       <motion.div
         animate={complete ? { boxShadow: ["0 0 0 rgba(245,151,61,0)", "0 0 36px rgba(245,151,61,0.4)", "0 0 0 rgba(245,151,61,0)"] } : {}}
         transition={{ duration: 2.4, repeat: complete ? Infinity : 0, ease: "easeInOut" }}
         style={{ position: "absolute", inset: 0, borderRadius: "50%" }}
       />
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <svg width={responsiveSize} height={responsiveSize} viewBox={`0 0 ${size} ${size}`}>
         <defs>
           <linearGradient id="emberGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="var(--ember-400)" />
@@ -55,10 +67,17 @@ export default function ProgressRing({ pct, done, total, size = 132 }: ProgressR
           justifyContent: "center",
         }}
       >
-        <span style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 700, lineHeight: 1 }}>
+        <span
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: "clamp(20px, 5vw, 28px)",
+            fontWeight: 700,
+            lineHeight: 1,
+          }}
+        >
           {pct}%
         </span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-dim)", marginTop: 6 }}>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text-dim)", marginTop: 4 }}>
           {done}/{total}
         </span>
       </div>
