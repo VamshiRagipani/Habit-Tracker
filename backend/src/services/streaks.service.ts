@@ -1,9 +1,59 @@
 import { SupabaseClient } from "@supabase/supabase-js";
+import { ApiError } from "../middleware/errorHandler";
 import { listHabits } from "./habits.service";
 import { getLogsInRange } from "./logs.service";
 
 function isoDate(d: Date) {
   return d.toISOString().split("T")[0];
+}
+
+function getCurrentWeekForCycle(startDate: string | Date, durationWeeks: number) {
+  const today = new Date();
+  const start = new Date(startDate);
+  const diff = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  if (diff < 0) return 1;
+  return Math.min(Math.max(Math.floor(diff / 7) + 1, 1), durationWeeks);
+}
+
+export async function getActiveStreakProgram(supabase: SupabaseClient) {
+  const { data: cycles, error: cycleError } = await supabase
+    .from("streak_cycles")
+    .select("id, name, start_date, duration_weeks")
+    .eq("is_active", true)
+    .order("start_date", { ascending: false })
+    .limit(1);
+  
+  // Handle table not found or other errors gracefully
+  if (cycleError) {
+    console.warn("Warning: Could not fetch streak cycles:", cycleError.message);
+    return null;
+  }
+  
+  const cycle = cycles?.[0] ?? null;
+  if (!cycle) return null;
+
+  const { data: weeks, error: weeksError } = await supabase
+    .from("streak_weeks")
+    .select("week, focus, color, display_order")
+    .eq("cycle_id", cycle.id)
+    .eq("is_active", true)
+    .order("display_order", { ascending: true });
+  if (weeksError) throw new ApiError(500, weeksError.message);
+
+  const { data: highlights, error: highlightsError } = await supabase
+    .from("streak_highlights")
+    .select("icon, title, description, display_order")
+    .eq("cycle_id", cycle.id)
+    .eq("is_active", true)
+    .order("display_order", { ascending: true });
+  if (highlightsError) throw new ApiError(500, highlightsError.message);
+
+  return {
+    cycle,
+    weeks: weeks ?? [],
+    highlights: highlights ?? [],
+    currentWeek: getCurrentWeekForCycle(cycle.start_date, cycle.duration_weeks),
+  };
 }
 
 /**

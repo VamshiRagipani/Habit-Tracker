@@ -6,7 +6,15 @@ interface WeekGoal {
   color: string;
 }
 
-export default function WeekBanner({ weekGoal }: { weekGoal: WeekGoal }) {
+export default function WeekBanner({ weekGoal }: { weekGoal: WeekGoal | null }) {
+  if (!weekGoal) {
+    return (
+      <div className="card" style={{ padding: "12px 16px", marginTop: 16, color: "var(--text-faint)" }}>
+        No current streak program available.
+      </div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}

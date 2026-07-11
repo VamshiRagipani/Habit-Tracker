@@ -198,7 +198,13 @@ export default function DailyTracker() {
                 />
               )}
 
-              {view === "plan" && <PlanView weekGoals={weekGoals} currentWeek={currentWeek} />}
+              {view === "plan" && (
+                <PlanView
+                  weekGoals={weekGoals}
+                  currentWeek={currentWeek}
+                  highlights={dashboard.highlights ?? []}
+                />
+              )}
             </motion.div>
           </AnimatePresence>
         </div>

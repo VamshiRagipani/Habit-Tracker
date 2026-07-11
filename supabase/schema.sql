@@ -50,6 +50,126 @@ create policy "habits_update_own" on public.habits for update using (auth.uid() 
 create policy "habits_delete_own" on public.habits for delete using (auth.uid() = user_id);
 
 -- ---------------------------------------------------------
+-- STREAK PROGRAMS (dynamic weekly goals and timeline)
+-- ---------------------------------------------------------
+create table if not exists public.streak_cycles (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  start_date date not null,
+  duration_weeks int not null default 4,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.streak_cycles enable row level security;
+
+create policy "streak_cycles_select_all" on public.streak_cycles
+  for select using (auth.role() = 'authenticated');
+
+create table if not exists public.streak_weeks (
+  id uuid primary key default gen_random_uuid(),
+  cycle_id uuid not null references public.streak_cycles(id) on delete cascade,
+  week int not null,
+  focus text not null,
+  color text not null default '#6366f1',
+  display_order int not null default 0,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (cycle_id, week)
+);
+
+alter table public.streak_weeks enable row level security;
+
+create policy "streak_weeks_select_all" on public.streak_weeks
+  for select using (auth.role() = 'authenticated');
+
+create table if not exists public.streak_highlights (
+  id uuid primary key default gen_random_uuid(),
+  cycle_id uuid not null references public.streak_cycles(id) on delete cascade,
+  icon text not null default 'ℹ️',
+  title text not null,
+  description text not null,
+  display_order int not null default 0,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (cycle_id, title)
+);
+
+alter table public.streak_highlights enable row level security;
+
+create policy "streak_highlights_select_all" on public.streak_highlights
+  for select using (auth.role() = 'authenticated');
+
+-- Seed a default public streak program if it doesn't already exist.
+do $$
+begin
+  if not exists (select 1 from public.streak_cycles where name = 'default') then
+    insert into public.streak_cycles (name, start_date, duration_weeks, is_active)
+    values ('default', '2026-06-22', 4, true);
+  end if;
+end
+$$;
+
+do $$
+declare
+  cycle_id uuid;
+begin
+  select id into cycle_id from public.streak_cycles where name = 'default' limit 1;
+  if cycle_id is not null then
+    if not exists (select 1 from public.streak_weeks sw where sw.cycle_id = cycle_id and sw.week = 1) then
+      insert into public.streak_weeks (cycle_id, week, focus, color, display_order, is_active)
+      values (cycle_id, 1, 'Phone stays face-down until focus block done', '#6366f1', 1, true);
+    end if;
+    if not exists (select 1 from public.streak_weeks sw where sw.cycle_id = cycle_id and sw.week = 2) then
+      insert into public.streak_weeks (cycle_id, week, focus, color, display_order, is_active)
+      values (cycle_id, 2, 'Morning anchor: desk before any screen', '#0ea5e9', 2, true);
+    end if;
+    if not exists (select 1 from public.streak_weeks sw where sw.cycle_id = cycle_id and sw.week = 3) then
+      insert into public.streak_weeks (cycle_id, week, focus, color, display_order, is_active)
+      values (cycle_id, 3, 'Kill notifications during work hours', '#10b981', 3, true);
+    end if;
+    if not exists (select 1 from public.streak_weeks sw where sw.cycle_id = cycle_id and sw.week = 4) then
+      insert into public.streak_weeks (cycle_id, week, focus, color, display_order, is_active)
+      values (cycle_id, 4, '45 min × 5 days — no weekend binges', '#f59e0b', 4, true);
+    end if;
+  end if;
+end
+$$;
+
+do $$
+declare
+  cycle_id uuid;
+begin
+  select id into cycle_id from public.streak_cycles where name = 'default' limit 1;
+  if cycle_id is not null then
+    if not exists (select 1 from public.streak_highlights sh where sh.cycle_id = cycle_id and sh.title = 'Phone-first mornings') then
+      insert into public.streak_highlights (cycle_id, icon, title, description, display_order, is_active)
+      values (cycle_id, '📱', 'Phone-first mornings', 'Keep your mind calm by delaying phone use until after your first focus block.', 1, true);
+    end if;
+    if not exists (select 1 from public.streak_highlights sh where sh.cycle_id = cycle_id and sh.title = 'Win the workday') then
+      insert into public.streak_highlights (cycle_id, icon, title, description, display_order, is_active)
+      values (cycle_id, '🧠', 'Win the workday', 'Build deep work momentum with a focused session before distractions.', 2, true);
+    end if;
+    if not exists (select 1 from public.streak_highlights sh where sh.cycle_id = cycle_id and sh.title = 'Notifications on your terms') then
+      insert into public.streak_highlights (cycle_id, icon, title, description, display_order, is_active)
+      values (cycle_id, '🔕', 'Notifications on your terms', 'Limit interruptions and check apps at dedicated times.', 3, true);
+    end if;
+    if not exists (select 1 from public.streak_highlights sh where sh.cycle_id = cycle_id and sh.title = 'Weekend balance') then
+      insert into public.streak_highlights (cycle_id, icon, title, description, display_order, is_active)
+      values (cycle_id, '📅', 'Weekend balance', 'Avoid weekend-only effort by making steady daily progress instead.', 4, true);
+    end if;
+    if not exists (select 1 from public.streak_highlights sh where sh.cycle_id = cycle_id and sh.title = 'Move the needle') then
+      insert into public.streak_highlights (cycle_id, icon, title, description, display_order, is_active)
+      values (cycle_id, '🎯', 'Move the needle', 'Choose at least one small but meaningful win each day.', 5, true);
+    end if;
+  end if;
+end
+$$;
+
+-- ---------------------------------------------------------
 -- DAILY HABIT LOGS (one row per habit per day)
 -- ---------------------------------------------------------
 create table if not exists public.daily_logs (

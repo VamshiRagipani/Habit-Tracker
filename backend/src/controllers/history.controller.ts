@@ -42,7 +42,7 @@ export async function getHistory(req: Request, res: Response, next: NextFunction
       };
     });
 
-    const reflections = await listReflections(supabase, userId, 100);
+    const reflections = await listReflections(supabase, userId, 1, 100);
 
     res.json({ bars, total: habits.length, reflections });
   } catch (err) {
