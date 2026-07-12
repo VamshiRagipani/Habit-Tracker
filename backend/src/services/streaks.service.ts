@@ -15,6 +15,11 @@ function getCurrentWeekForCycle(startDate: string | Date, durationWeeks: number)
   return Math.min(Math.max(Math.floor(diff / 7) + 1, 1), durationWeeks);
 }
 
+function isMissingTableError(error: { message?: string } | null | undefined) {
+  const message = error?.message?.toLowerCase() ?? "";
+  return message.includes("does not exist") || message.includes("could not find the table") || message.includes("relation") && message.includes("does not exist");
+}
+
 export async function getActiveStreakProgram(supabase: SupabaseClient) {
   const { data: cycles, error: cycleError } = await supabase
     .from("streak_cycles")
@@ -23,14 +28,16 @@ export async function getActiveStreakProgram(supabase: SupabaseClient) {
     .order("start_date", { ascending: false })
     .limit(1);
   
-  // Handle table not found or other errors gracefully
   if (cycleError) {
+    if (isMissingTableError(cycleError)) {
+      return { cycle: null, weeks: [], highlights: [], currentWeek: 1 };
+    }
     console.warn("Warning: Could not fetch streak cycles:", cycleError.message);
     return null;
   }
   
   const cycle = cycles?.[0] ?? null;
-  if (!cycle) return null;
+  if (!cycle) return { cycle: null, weeks: [], highlights: [], currentWeek: 1 };
 
   const { data: weeks, error: weeksError } = await supabase
     .from("streak_weeks")
@@ -38,7 +45,12 @@ export async function getActiveStreakProgram(supabase: SupabaseClient) {
     .eq("cycle_id", cycle.id)
     .eq("is_active", true)
     .order("display_order", { ascending: true });
-  if (weeksError) throw new ApiError(500, weeksError.message);
+  if (weeksError) {
+    if (isMissingTableError(weeksError)) {
+      return { cycle, weeks: [], highlights: [], currentWeek: getCurrentWeekForCycle(cycle.start_date, cycle.duration_weeks) };
+    }
+    throw new ApiError(500, weeksError.message);
+  }
 
   const { data: highlights, error: highlightsError } = await supabase
     .from("streak_highlights")
@@ -46,7 +58,12 @@ export async function getActiveStreakProgram(supabase: SupabaseClient) {
     .eq("cycle_id", cycle.id)
     .eq("is_active", true)
     .order("display_order", { ascending: true });
-  if (highlightsError) throw new ApiError(500, highlightsError.message);
+  if (highlightsError) {
+    if (isMissingTableError(highlightsError)) {
+      return { cycle, weeks: weeks ?? [], highlights: [], currentWeek: getCurrentWeekForCycle(cycle.start_date, cycle.duration_weeks) };
+    }
+    throw new ApiError(500, highlightsError.message);
+  }
 
   return {
     cycle,
