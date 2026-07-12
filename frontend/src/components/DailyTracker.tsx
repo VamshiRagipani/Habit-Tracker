@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../lib/apiClient";
 import { supabase } from "../lib/supabaseClient";
@@ -76,6 +76,25 @@ function getTodayKey() {
   return `${y}-${m}-${day}`;
 }
 
+function applyHabitState(dashboard: any, habitId: string, done: boolean) {
+  if (!dashboard) return dashboard;
+
+  const habits = dashboard.habits.map((habit: any) => (habit.id === habitId ? { ...habit, done } : habit));
+  const doneCount = habits.filter((habit: any) => habit.done).length;
+  const pct = habits.length ? Math.round((doneCount / habits.length) * 100) : 0;
+
+  return { ...dashboard, habits, doneCount, pct };
+}
+
+function toggleHabitState(dashboard: any, habitId: string) {
+  if (!dashboard) return dashboard;
+
+  const target = dashboard.habits.find((habit: any) => habit.id === habitId);
+  if (!target) return dashboard;
+
+  return applyHabitState(dashboard, habitId, !target.done);
+}
+
 export default function DailyTracker() {
   const todayKey = getTodayKey();
 
@@ -83,6 +102,8 @@ export default function DailyTracker() {
   const [history, setHistory] = useState<any>(null);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const [greetingName, setGreetingName] = useState("");
+  const dashboardRef = useRef<any>(null);
+  const latestToggleRef = useRef(0);
 
   const [view, setView] = useState<ViewKey>("today");
   const [reflectionText, setReflectionText] = useState("");
@@ -94,10 +115,13 @@ export default function DailyTracker() {
   const loadDashboard = useCallback(async () => {
     try {
       const d = await api.getDashboard();
+      dashboardRef.current = d;
       setDashboard(d);
       return d;
     } catch (err: any) {
-      setDashboard(buildFallbackDashboard());
+      const fallback = buildFallbackDashboard();
+      dashboardRef.current = fallback;
+      setDashboard(fallback);
       throw err;
     }
   }, []);
@@ -112,6 +136,10 @@ export default function DailyTracker() {
       throw err;
     }
   }, []);
+
+  useEffect(() => {
+    dashboardRef.current = dashboard;
+  }, [dashboard]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -138,19 +166,31 @@ export default function DailyTracker() {
   }, [loadDashboard, loadHistory]);
 
   async function toggle(habitId: string) {
+    const currentDashboard = dashboardRef.current;
+    const targetHabit = currentDashboard?.habits?.find((habit: any) => habit.id === habitId);
+    const previousDone = targetHabit?.done ?? false;
+    const nextDone = !previousDone;
+    const toggleId = ++latestToggleRef.current;
+
     setDashboard((prev: any) => {
       if (!prev) return prev;
-      const habits = prev.habits.map((h: any) => (h.id === habitId ? { ...h, done: !h.done } : h));
-      const doneCount = habits.filter((h: any) => h.done).length;
-      const pct = habits.length ? Math.round((doneCount / habits.length) * 100) : 0;
-      return { ...prev, habits, doneCount, pct };
+
+      const nextDashboard = applyHabitState(prev, habitId, nextDone);
+      dashboardRef.current = nextDashboard;
+      return nextDashboard;
     });
+
     try {
       await api.toggleLog(habitId, getTodayKey());
-      await Promise.all([loadDashboard(), loadHistory()]);
     } catch (err: any) {
+      setDashboard((prev: any) => {
+        if (!prev) return prev;
+
+        const revertedDashboard = applyHabitState(prev, habitId, previousDone);
+        dashboardRef.current = revertedDashboard;
+        return revertedDashboard;
+      });
       setErrorMsg(err.message || "Couldn't save that — try again.");
-      await loadDashboard();
     }
   }
 
