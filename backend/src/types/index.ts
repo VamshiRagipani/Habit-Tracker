@@ -26,6 +26,21 @@ export interface Habit {
   is_active: boolean;
 }
 
+export interface HabitClientPayload {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  completed: boolean;
+  order: number;
+  habit_key: string;
+  phase: number;
+  sort_order: number;
+  label: string;
+  detail: string | null;
+  is_active: boolean;
+}
+
 export interface DailyLog {
   id: string;
   user_id: string;

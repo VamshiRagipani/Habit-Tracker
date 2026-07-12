@@ -3,8 +3,10 @@ import { Check } from "lucide-react";
 
 interface Habit {
   id: string;
-  icon: string;
-  label: string;
+  title?: string;
+  description?: string | null;
+  icon?: string;
+  label?: string;
   detail?: string | null;
 }
 
@@ -17,6 +19,10 @@ export default function HabitCard({
   done: boolean;
   onToggle: () => void;
 }) {
+  const title = habit.title ?? habit.label ?? "Habit";
+  const description = habit.description ?? habit.detail ?? "";
+  const icon = habit.icon ?? "✅";
+
   return (
     <motion.div
       layout
@@ -46,7 +52,7 @@ export default function HabitCard({
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: 1 }}>
-        <span style={{ fontSize: 20, minWidth: 24, flexShrink: 0, lineHeight: 1 }}>{habit.icon}</span>
+        <span style={{ fontSize: 20, minWidth: 24, flexShrink: 0, lineHeight: 1 }}>{icon}</span>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div
             style={{
@@ -58,9 +64,9 @@ export default function HabitCard({
               wordBreak: "break-word",
             }}
           >
-            {habit.label}
+            {title}
           </div>
-          {habit.detail && (
+          {description && (
             <div
               style={{
                 fontSize: 11,
@@ -72,7 +78,7 @@ export default function HabitCard({
                 WebkitBoxOrient: "vertical",
               }}
             >
-              {habit.detail}
+              {description}
             </div>
           )}
         </div>

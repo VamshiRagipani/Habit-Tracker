@@ -16,51 +16,21 @@ import DashboardSkeleton from "./ui/Skeleton";
 
 function buildFallbackDashboard() {
   return {
-    habits: [
-      { id: "demo-phone", habit_key: "phone_lock", icon: "📵", label: "No phone for first 30 min", detail: "Wake up → water → desk. Zero apps.", done: true },
-      { id: "demo-focus", habit_key: "focus_block", icon: "🧠", label: "45-min deep work done", detail: "DSA / side project / article. Before anything else.", done: true },
-      { id: "demo-notifs", habit_key: "notif_off", icon: "🔕", label: "Notifications off 9am–7pm", detail: "Check WhatsApp at 1pm & 8pm only.", done: false },
-      { id: "demo-binge", habit_key: "no_binge", icon: "📅", label: "No weekend-only binge plan", detail: "Did I do something today instead of saving it for Saturday?", done: false },
-      { id: "demo-needle", habit_key: "needle", icon: "🎯", label: "Moved the needle today", detail: "Not just busy — actually progressed on a real goal.", done: false },
-      { id: "demo-gym", habit_key: "gym", icon: "💪", label: "Gym / workout done", detail: "Push / Pull / Legs / Shoulders split.", done: false },
-    ],
-    doneCount: 2,
-    pct: 33,
-    streak: 4,
-    currentWeek: 2,
-    weekGoal: "Stay focused and protect your mornings.",
-    weekGoals: [
-      { week: 1, focus: "Phone stays face-down until focus block done", color: "#6366f1" },
-      { week: 2, focus: "Morning anchor: desk before any screen", color: "#0ea5e9" },
-      { week: 3, focus: "Kill notifications during work hours", color: "#10b981" },
-      { week: 4, focus: "45 min × 5 days — no weekend binges", color: "#f59e0b" },
-    ],
-    highlights: [
-      { icon: "📱", title: "Phone-first mornings", description: "Keep your mind calm by delaying phone use until after your first focus block." },
-      { icon: "🧠", title: "Win the workday", description: "Build deep work momentum with a focused session before distractions." },
-    ],
+    habits: [],
+    doneCount: 0,
+    pct: 0,
+    streak: 0,
+    currentWeek: 1,
+    weekGoal: null,
+    weekGoals: [],
+    highlights: [],
   };
 }
 
 function buildFallbackHistory() {
   return {
-    bars: [
-      { key: "mon", label: "Mon", done: 4, isToday: false },
-      { key: "tue", label: "Tue", done: 3, isToday: false },
-      { key: "wed", label: "Wed", done: 5, isToday: false },
-      { key: "thu", label: "Thu", done: 3, isToday: false },
-      { key: "fri", label: "Fri", done: 4, isToday: false },
-      { key: "sat", label: "Sat", done: 2, isToday: false },
-      { key: "sun", label: "Sun", done: 4, isToday: true },
-    ],
-    reflections: [
-      {
-        id: "demo-reflection",
-        log_date: getTodayKey(),
-        body: "Demo mode is active. Connect the backend to sync your real habit data.",
-        created_at: new Date().toISOString(),
-      },
-    ],
+    bars: [],
+    reflections: [],
   };
 }
 
@@ -79,20 +49,14 @@ function getTodayKey() {
 function applyHabitState(dashboard: any, habitId: string, done: boolean) {
   if (!dashboard) return dashboard;
 
-  const habits = dashboard.habits.map((habit: any) => (habit.id === habitId ? { ...habit, done } : habit));
-  const doneCount = habits.filter((habit: any) => habit.done).length;
+  const habits = dashboard.habits.map((habit: any) => {
+    if (habit.id !== habitId) return habit;
+    return { ...habit, completed: done, done };
+  });
+  const doneCount = habits.filter((habit: any) => habit.completed ?? habit.done).length;
   const pct = habits.length ? Math.round((doneCount / habits.length) * 100) : 0;
 
   return { ...dashboard, habits, doneCount, pct };
-}
-
-function toggleHabitState(dashboard: any, habitId: string) {
-  if (!dashboard) return dashboard;
-
-  const target = dashboard.habits.find((habit: any) => habit.id === habitId);
-  if (!target) return dashboard;
-
-  return applyHabitState(dashboard, habitId, !target.done);
 }
 
 export default function DailyTracker() {
@@ -168,9 +132,8 @@ export default function DailyTracker() {
   async function toggle(habitId: string) {
     const currentDashboard = dashboardRef.current;
     const targetHabit = currentDashboard?.habits?.find((habit: any) => habit.id === habitId);
-    const previousDone = targetHabit?.done ?? false;
+    const previousDone = targetHabit?.completed ?? targetHabit?.done ?? false;
     const nextDone = !previousDone;
-    const toggleId = ++latestToggleRef.current;
 
     setDashboard((prev: any) => {
       if (!prev) return prev;
@@ -234,7 +197,11 @@ export default function DailyTracker() {
     );
   }
 
-  const HABITS = dashboard.habits;
+  const HABITS = [...(dashboard.habits ?? [])].sort((a: any, b: any) => {
+    const aOrder = a.order ?? a.sort_order ?? 0;
+    const bOrder = b.order ?? b.sort_order ?? 0;
+    return aOrder - bOrder;
+  });
   const doneCount = dashboard.doneCount;
   const pct = dashboard.pct;
   const streak = dashboard.streak;
@@ -311,9 +278,15 @@ export default function DailyTracker() {
             >
               {view === "today" && (
                 <div>
-                  {HABITS.map((h: any) => (
-                    <HabitCard key={h.id} habit={h} done={!!h.done} onToggle={() => toggle(h.id)} />
-                  ))}
+                  {HABITS.length === 0 ? (
+                    <div className="card" style={{ padding: 16, textAlign: "center", color: "var(--text-dim)" }}>
+                      No habits are available yet. Add or update them in the database so the API can return them here.
+                    </div>
+                  ) : (
+                    HABITS.map((h: any) => (
+                      <HabitCard key={h.id} habit={h} done={!!(h.completed ?? h.done)} onToggle={() => toggle(h.id)} />
+                    ))
+                  )}
                   <ReflectionPanel value={reflectionText} onChange={setReflectionText} onSave={saveReflection} />
                 </div>
               )}
