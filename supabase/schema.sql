@@ -17,6 +17,10 @@ create table if not exists public.profiles (
 
 alter table public.profiles enable row level security;
 
+drop policy if exists "profiles_select_own" on public.profiles;
+drop policy if exists "profiles_insert_own" on public.profiles;
+drop policy if exists "profiles_update_own" on public.profiles;
+
 create policy "profiles_select_own" on public.profiles
   for select using (auth.uid() = id);
 create policy "profiles_insert_own" on public.profiles
@@ -25,7 +29,7 @@ create policy "profiles_update_own" on public.profiles
   for update using (auth.uid() = id);
 
 -- ---------------------------------------------------------
--- HABITS (per-user list, seeded with the original 6 defaults)
+-- HABITS (per-user list, seeded with the coding-focused micro habits)
 -- ---------------------------------------------------------
 create table if not exists public.habits (
   id uuid primary key default gen_random_uuid(),
@@ -43,6 +47,11 @@ create table if not exists public.habits (
 );
 
 alter table public.habits enable row level security;
+
+drop policy if exists "habits_select_own" on public.habits;
+drop policy if exists "habits_insert_own" on public.habits;
+drop policy if exists "habits_update_own" on public.habits;
+drop policy if exists "habits_delete_own" on public.habits;
 
 create policy "habits_select_own" on public.habits for select using (auth.uid() = user_id);
 create policy "habits_insert_own" on public.habits for insert with check (auth.uid() = user_id);
@@ -64,6 +73,8 @@ create table if not exists public.streak_cycles (
 
 alter table public.streak_cycles enable row level security;
 
+drop policy if exists "streak_cycles_select_all" on public.streak_cycles;
+
 create policy "streak_cycles_select_all" on public.streak_cycles
   for select using (auth.role() = 'authenticated');
 
@@ -81,6 +92,8 @@ create table if not exists public.streak_weeks (
 );
 
 alter table public.streak_weeks enable row level security;
+
+drop policy if exists "streak_weeks_select_all" on public.streak_weeks;
 
 create policy "streak_weeks_select_all" on public.streak_weeks
   for select using (auth.role() = 'authenticated');
@@ -100,6 +113,8 @@ create table if not exists public.streak_highlights (
 
 alter table public.streak_highlights enable row level security;
 
+drop policy if exists "streak_highlights_select_all" on public.streak_highlights;
+
 create policy "streak_highlights_select_all" on public.streak_highlights
   for select using (auth.role() = 'authenticated');
 
@@ -115,25 +130,25 @@ $$;
 
 do $$
 declare
-  cycle_id uuid;
+  v_cycle_id uuid;
 begin
-  select id into cycle_id from public.streak_cycles where name = 'default' limit 1;
-  if cycle_id is not null then
-    if not exists (select 1 from public.streak_weeks sw where sw.cycle_id = cycle_id and sw.week = 1) then
+  select id into v_cycle_id from public.streak_cycles where name = 'default' limit 1;
+  if v_cycle_id is not null then
+    if not exists (select 1 from public.streak_weeks sw where sw.cycle_id = v_cycle_id and sw.week = 1) then
       insert into public.streak_weeks (cycle_id, week, focus, color, display_order, is_active)
-      values (cycle_id, 1, 'Phone stays face-down until focus block done', '#6366f1', 1, true);
+      values (v_cycle_id, 1, 'Phone stays face-down until focus block done', '#6366f1', 1, true);
     end if;
-    if not exists (select 1 from public.streak_weeks sw where sw.cycle_id = cycle_id and sw.week = 2) then
+    if not exists (select 1 from public.streak_weeks sw where sw.cycle_id = v_cycle_id and sw.week = 2) then
       insert into public.streak_weeks (cycle_id, week, focus, color, display_order, is_active)
-      values (cycle_id, 2, 'Morning anchor: desk before any screen', '#0ea5e9', 2, true);
+      values (v_cycle_id, 2, 'Morning anchor: desk before any screen', '#0ea5e9', 2, true);
     end if;
-    if not exists (select 1 from public.streak_weeks sw where sw.cycle_id = cycle_id and sw.week = 3) then
+    if not exists (select 1 from public.streak_weeks sw where sw.cycle_id = v_cycle_id and sw.week = 3) then
       insert into public.streak_weeks (cycle_id, week, focus, color, display_order, is_active)
-      values (cycle_id, 3, 'Kill notifications during work hours', '#10b981', 3, true);
+      values (v_cycle_id, 3, 'Kill notifications during work hours', '#10b981', 3, true);
     end if;
-    if not exists (select 1 from public.streak_weeks sw where sw.cycle_id = cycle_id and sw.week = 4) then
+    if not exists (select 1 from public.streak_weeks sw where sw.cycle_id = v_cycle_id and sw.week = 4) then
       insert into public.streak_weeks (cycle_id, week, focus, color, display_order, is_active)
-      values (cycle_id, 4, '45 min × 5 days — no weekend binges', '#f59e0b', 4, true);
+      values (v_cycle_id, 4, '45 min × 5 days — no weekend binges', '#f59e0b', 4, true);
     end if;
   end if;
 end
@@ -141,29 +156,29 @@ $$;
 
 do $$
 declare
-  cycle_id uuid;
+  v_cycle_id uuid;
 begin
-  select id into cycle_id from public.streak_cycles where name = 'default' limit 1;
-  if cycle_id is not null then
-    if not exists (select 1 from public.streak_highlights sh where sh.cycle_id = cycle_id and sh.title = 'Phone-first mornings') then
+  select id into v_cycle_id from public.streak_cycles where name = 'default' limit 1;
+  if v_cycle_id is not null then
+    if not exists (select 1 from public.streak_highlights sh where sh.cycle_id = v_cycle_id and sh.title = 'Phone-first mornings') then
       insert into public.streak_highlights (cycle_id, icon, title, description, display_order, is_active)
-      values (cycle_id, '📱', 'Phone-first mornings', 'Keep your mind calm by delaying phone use until after your first focus block.', 1, true);
+      values (v_cycle_id, '📱', 'Phone-first mornings', 'Keep your mind calm by delaying phone use until after your first focus block.', 1, true);
     end if;
-    if not exists (select 1 from public.streak_highlights sh where sh.cycle_id = cycle_id and sh.title = 'Win the workday') then
+    if not exists (select 1 from public.streak_highlights sh where sh.cycle_id = v_cycle_id and sh.title = 'Win the workday') then
       insert into public.streak_highlights (cycle_id, icon, title, description, display_order, is_active)
-      values (cycle_id, '🧠', 'Win the workday', 'Build deep work momentum with a focused session before distractions.', 2, true);
+      values (v_cycle_id, '🧠', 'Win the workday', 'Build deep work momentum with a focused session before distractions.', 2, true);
     end if;
-    if not exists (select 1 from public.streak_highlights sh where sh.cycle_id = cycle_id and sh.title = 'Notifications on your terms') then
+    if not exists (select 1 from public.streak_highlights sh where sh.cycle_id = v_cycle_id and sh.title = 'Notifications on your terms') then
       insert into public.streak_highlights (cycle_id, icon, title, description, display_order, is_active)
-      values (cycle_id, '🔕', 'Notifications on your terms', 'Limit interruptions and check apps at dedicated times.', 3, true);
+      values (v_cycle_id, '🔕', 'Notifications on your terms', 'Limit interruptions and check apps at dedicated times.', 3, true);
     end if;
-    if not exists (select 1 from public.streak_highlights sh where sh.cycle_id = cycle_id and sh.title = 'Weekend balance') then
+    if not exists (select 1 from public.streak_highlights sh where sh.cycle_id = v_cycle_id and sh.title = 'Weekend balance') then
       insert into public.streak_highlights (cycle_id, icon, title, description, display_order, is_active)
-      values (cycle_id, '📅', 'Weekend balance', 'Avoid weekend-only effort by making steady daily progress instead.', 4, true);
+      values (v_cycle_id, '📅', 'Weekend balance', 'Avoid weekend-only effort by making steady daily progress instead.', 4, true);
     end if;
-    if not exists (select 1 from public.streak_highlights sh where sh.cycle_id = cycle_id and sh.title = 'Move the needle') then
+    if not exists (select 1 from public.streak_highlights sh where sh.cycle_id = v_cycle_id and sh.title = 'Move the needle') then
       insert into public.streak_highlights (cycle_id, icon, title, description, display_order, is_active)
-      values (cycle_id, '🎯', 'Move the needle', 'Choose at least one small but meaningful win each day.', 5, true);
+      values (v_cycle_id, '🎯', 'Move the needle', 'Choose at least one small but meaningful win each day.', 5, true);
     end if;
   end if;
 end
@@ -184,6 +199,11 @@ create table if not exists public.daily_logs (
 );
 
 alter table public.daily_logs enable row level security;
+
+drop policy if exists "logs_select_own" on public.daily_logs;
+drop policy if exists "logs_insert_own" on public.daily_logs;
+drop policy if exists "logs_update_own" on public.daily_logs;
+drop policy if exists "logs_delete_own" on public.daily_logs;
 
 create policy "logs_select_own" on public.daily_logs for select using (auth.uid() = user_id);
 create policy "logs_insert_own" on public.daily_logs for insert with check (auth.uid() = user_id);
@@ -222,6 +242,11 @@ $$;
 create index if not exists idx_reflections_user_date_created
   on public.reflections (user_id, log_date, created_at desc);
 
+drop policy if exists "reflections_select_own" on public.reflections;
+drop policy if exists "reflections_insert_own" on public.reflections;
+drop policy if exists "reflections_update_own" on public.reflections;
+drop policy if exists "reflections_delete_own" on public.reflections;
+
 create policy "reflections_select_own" on public.reflections for select using (auth.uid() = user_id);
 create policy "reflections_insert_own" on public.reflections for insert with check (auth.uid() = user_id);
 create policy "reflections_update_own" on public.reflections for update using (auth.uid() = user_id);
@@ -255,7 +280,7 @@ create trigger trg_reflections_updated_at before update on public.reflections
   for each row execute function public.set_updated_at();
 
 -- ---------------------------------------------------------
--- New user hook: create profile + seed the original 6 habits
+-- New user hook: create profile + seed the coding-focused micro habits
 -- (runs with elevated privileges via SECURITY DEFINER, bypassing RLS
 --  just for this one bootstrap insert — required since the new user
 --  has no session yet at the moment auth.users gets the row)
@@ -266,13 +291,32 @@ begin
   insert into public.profiles (id, display_name)
   values (new.id, split_part(new.email, '@', 1));
 
+  delete from public.habits
+  where habit_key in ('phone_lock', 'focus_block', 'notif_off', 'no_binge', 'needle', 'gym');
+
   insert into public.habits (user_id, habit_key, icon, label, detail, phase, sort_order) values
-    (new.id, 'phone_lock',  '📵', 'No phone for first 30 min',  'Wake up → water → desk. Zero apps.', 1, 1),
-    (new.id, 'focus_block', '🧠', '45-min deep work done',      'DSA / side project / article. Before anything else.', 1, 2),
-    (new.id, 'notif_off',   '🔕', 'Notifications off 9am–7pm',  'Check WhatsApp at 1pm & 8pm only.', 2, 3),
-    (new.id, 'no_binge',    '📅', 'No weekend-only binge plan', 'Did I do something today instead of saving it for Saturday?', 2, 4),
-    (new.id, 'needle',      '🎯', 'Moved the needle today',     'Not just busy — actually progressed on a real goal.', 3, 5),
-    (new.id, 'gym',         '💪', 'Gym / workout done',         'Push / Pull / Legs / Shoulders split.', 3, 6);
+    (new.id, 'wake_600', '⏰', 'Wake Up at 6:00 AM', 'Start the day early and protect your first hour.', 1, 1),
+    (new.id, 'phone_free_30', '🚫', 'No Phone for First 30 Min', 'Avoid the scroll and begin with focus.', 1, 2),
+    (new.id, 'water_after_wake', '💧', 'Drink Water After Waking Up', 'Hydrate before checking anything else.', 1, 3),
+    (new.id, 'study_coding_30', '📚', 'Study Coding for 30 Min', 'Spend a short block learning something useful.', 1, 4),
+    (new.id, 'solve_dsa_1', '🧠', 'Solve 1 DSA Problem', 'Practice one problem even if it is small.', 1, 5),
+    (new.id, 'deep_coding_60', '💻', '60 Min Deep Coding Session', 'Work without distractions for a full focus block.', 2, 6),
+    (new.id, 'side_project_progress', '🚀', 'Make Progress on Side Project', 'Move one real thing forward today.', 2, 7),
+    (new.id, 'learn_concept_1', '📝', 'Learn 1 New Coding Concept', 'Pick one concept and make it stick.', 2, 8),
+    (new.id, 'read_code_15', '🔍', 'Read Code / Documentation for 15 Min', 'Read well-written code and understand it better.', 2, 9),
+    (new.id, 'refactor_code', '🧹', 'Refactor or Clean Up Code', 'Leave the codebase clearer than you found it.', 2, 10),
+    (new.id, 'meaningful_commit_1', '📦', 'Make at Least 1 Meaningful Git Commit', 'Commit work that meaningfully moves the project forward.', 3, 11),
+    (new.id, 'notifications_off', '📵', 'Keep Notifications Off During Deep Work', 'Protect your focus from context switching.', 3, 12),
+    (new.id, 'workout_15', '💪', '15 Min Workout', 'Move your body and reset your energy.', 3, 13),
+    (new.id, 'read_pages_5', '📖', 'Read 5 Pages', 'Build momentum through consistent reading.', 3, 14),
+    (new.id, 'plan_tomorrow_task', '📋', 'Plan Tomorrow’s Top Coding Task', 'End the day with a clear next step.', 3, 15),
+    (new.id, 'sleep_10_11', '😴', 'Sleep by 10–11 PM', 'Protect recovery for tomorrow’s focus.', 3, 16)
+  on conflict (user_id, habit_key) do update set
+    icon = excluded.icon,
+    label = excluded.label,
+    detail = excluded.detail,
+    phase = excluded.phase,
+    sort_order = excluded.sort_order;
 
   return new;
 end;

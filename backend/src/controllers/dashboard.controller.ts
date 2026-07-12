@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { listHabits } from "../services/habits.service";
+import { listHabits, serializeHabitsForClient } from "../services/habits.service";
 import { getLogsInRange } from "../services/logs.service";
 import { computeStreak, getActiveStreakProgram } from "../services/streaks.service";
 
@@ -16,8 +16,9 @@ export async function getDashboard(req: Request, res: Response, next: NextFuncti
     const habits = await listHabits(supabase, userId);
     const todaysLogs = await getLogsInRange(supabase, userId, today, today);
     const doneIds = new Set(todaysLogs.filter((l) => l.completed).map((l) => l.habit_id));
-    const doneCount = habits.filter((h) => doneIds.has(h.id)).length;
-    const pct = habits.length ? Math.round((doneCount / habits.length) * 100) : 0;
+    const serializedHabits = serializeHabitsForClient(habits, doneIds);
+    const doneCount = serializedHabits.filter((h) => h.completed).length;
+    const pct = serializedHabits.length ? Math.round((doneCount / serializedHabits.length) * 100) : 0;
 
     const streakResult = await computeStreak(supabase, userId);
     const streakProgram = await getActiveStreakProgram(supabase);
@@ -25,9 +26,9 @@ export async function getDashboard(req: Request, res: Response, next: NextFuncti
 
     res.json({
       date: today,
-      habits: habits.map((h) => ({ ...h, done: doneIds.has(h.id) })),
+      habits: serializedHabits,
       doneCount,
-      total: habits.length,
+      total: serializedHabits.length,
       pct,
       streak: streakResult.streak,
       currentWeek,

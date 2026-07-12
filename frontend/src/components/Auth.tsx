@@ -90,8 +90,8 @@ export default function Auth() {
               Small days,<br />stacked on purpose.
             </div>
             <p style={{ fontSize: 14, color: "var(--text-dim)", lineHeight: 1.6, maxWidth: 280 }}>
-              Six habits. One streak. No phone-first mornings, no weekend-only effort —
-              just a quiet log of days you showed up.
+              Sixteen coding micro-habits. One streak. Build momentum with focused work,
+              deep coding, and a calm start to every day.
             </p>
           </div>
           <div style={{ fontSize: 12, color: "var(--text-faint)" }}>Your data is private — only you can see it.</div>

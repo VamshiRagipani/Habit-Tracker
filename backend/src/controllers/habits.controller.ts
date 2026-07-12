@@ -4,7 +4,7 @@ import * as habitsService from "../services/habits.service";
 export async function getHabits(req: Request, res: Response, next: NextFunction) {
   try {
     const habits = await habitsService.listHabits(req.supabase!, req.user!.id);
-    res.json({ habits });
+    res.json({ habits: habitsService.serializeHabitsForClient(habits) });
   } catch (err) {
     next(err);
   }
