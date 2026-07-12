@@ -9,17 +9,23 @@ export default function ReflectionPanel({
 }: {
   value: string;
   onChange: (v: string) => void;
-  onSave: () => Promise<void>;
+  onSave: (text: string) => Promise<void>;
 }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  const canSave = value.trim().length > 0;
+
   async function handleSave() {
+    if (!canSave || saving) return;
+
     setSaving(true);
     try {
-      await onSave();
+      await onSave(value.trim());
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+    } catch {
+      // Preserve the existing textarea value and let the parent surface the error toast.
     } finally {
       setSaving(false);
     }
@@ -50,7 +56,7 @@ export default function ReflectionPanel({
         style={{ minHeight: 90, resize: "vertical" }}
       />
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
-        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+        <button className="btn btn-primary" onClick={handleSave} disabled={saving || !canSave}>
           {saving ? "Saving…" : "Save reflection"}
         </button>
         <AnimatePresence>

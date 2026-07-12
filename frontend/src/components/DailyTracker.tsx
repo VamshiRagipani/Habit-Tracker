@@ -194,9 +194,9 @@ export default function DailyTracker() {
     }
   }
 
-  async function saveReflection() {
+  async function saveReflection(text: string) {
     try {
-      await api.saveReflection(getTodayKey(), reflectionText);
+      await api.saveReflection(getTodayKey(), text);
       setHistoryRefreshKey((value) => value + 1);
       setReflectionText("");
     } catch (err: any) {
