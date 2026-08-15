@@ -14,23 +14,16 @@ import ProgressRing from "./ui/ProgressRing";
 import Toast from "./ui/Toast";
 import DashboardSkeleton from "./ui/Skeleton";
 
-function buildFallbackDashboard() {
+function getEmptyHabitForm() {
   return {
-    habits: [],
-    doneCount: 0,
-    pct: 0,
-    streak: 0,
-    currentWeek: 1,
-    weekGoal: null,
-    weekGoals: [],
-    highlights: [],
-  };
-}
-
-function buildFallbackHistory() {
-  return {
-    bars: [],
-    reflections: [],
+    label: "",
+    detail: "",
+    icon: "✅",
+    category: "",
+    frequency: "daily",
+    target: "",
+    unit: "",
+    start_date: getTodayKey(),
   };
 }
 
@@ -74,32 +67,27 @@ export default function DailyTracker() {
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [offlineMode, setOfflineMode] = useState(false);
+  const [showHabitForm, setShowHabitForm] = useState(false);
+  const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
+  const [habitForm, setHabitForm] = useState<any>(getEmptyHabitForm());
+  const [habitSaving, setHabitSaving] = useState(false);
 
   const loadDashboard = useCallback(async () => {
-    try {
-      const d = await api.getDashboard();
-      dashboardRef.current = d;
-      setDashboard(d);
-      return d;
-    } catch (err: any) {
-      const fallback = buildFallbackDashboard();
-      dashboardRef.current = fallback;
-      setDashboard(fallback);
-      throw err;
-    }
+    const d = await api.getDashboard();
+    dashboardRef.current = d;
+    setDashboard(d);
+    return d;
   }, []);
 
   const loadHistory = useCallback(async () => {
-    try {
-      const h = await api.getHistory(7);
-      setHistory(h);
-      return h;
-    } catch (err: any) {
-      setHistory(buildFallbackHistory());
-      throw err;
-    }
+    const h = await api.getHistory(7);
+    setHistory(h);
+    return h;
   }, []);
+
+  const refreshAll = useCallback(async () => {
+    await Promise.all([loadDashboard(), loadHistory()]);
+  }, [loadDashboard, loadHistory]);
 
   useEffect(() => {
     dashboardRef.current = dashboard;
@@ -117,17 +105,15 @@ export default function DailyTracker() {
     (async () => {
       try {
         setLoading(true);
-        setOfflineMode(false);
         setErrorMsg(null);
-        await Promise.all([loadDashboard(), loadHistory()]);
+        await refreshAll();
       } catch (err: any) {
-        setOfflineMode(true);
         setErrorMsg(err.message || "Failed to load your data.");
       } finally {
         setLoading(false);
       }
     })();
-  }, [loadDashboard, loadHistory]);
+  }, [refreshAll]);
 
   async function toggle(habitId: string) {
     const currentDashboard = dashboardRef.current;
@@ -154,6 +140,80 @@ export default function DailyTracker() {
         return revertedDashboard;
       });
       setErrorMsg(err.message || "Couldn't save that — try again.");
+    }
+  }
+
+  function openNewHabitForm() {
+    setEditingHabitId(null);
+    setHabitForm(getEmptyHabitForm());
+    setShowHabitForm(true);
+  }
+
+  function openEditHabitForm(habit: any) {
+    setEditingHabitId(habit.id);
+    setHabitForm({
+      label: habit.label ?? habit.title ?? "",
+      detail: habit.detail ?? "",
+      icon: habit.icon ?? "✅",
+      category: habit.category ?? "",
+      frequency: habit.frequency ?? "daily",
+      target: habit.target ?? "",
+      unit: habit.unit ?? "",
+      start_date: habit.start_date ?? getTodayKey(),
+    });
+    setShowHabitForm(true);
+  }
+
+  async function submitHabitForm(event: React.FormEvent) {
+    event.preventDefault();
+    const trimmedLabel = habitForm.label.trim();
+    if (!trimmedLabel) {
+      setErrorMsg("Habit name is required.");
+      return;
+    }
+
+    setHabitSaving(true);
+    setErrorMsg(null);
+
+    try {
+      const payload = {
+        label: trimmedLabel,
+        detail: habitForm.detail.trim(),
+        icon: habitForm.icon.trim() || "✅",
+        category: habitForm.category.trim(),
+        frequency: habitForm.frequency || "daily",
+        target: habitForm.target === "" ? null : Number(habitForm.target),
+        unit: habitForm.unit.trim(),
+        start_date: habitForm.start_date || getTodayKey(),
+      };
+
+      if (editingHabitId) {
+        await api.updateHabit(editingHabitId, payload);
+      } else {
+        await api.createHabit(payload);
+      }
+
+      setShowHabitForm(false);
+      setEditingHabitId(null);
+      setHabitForm(getEmptyHabitForm());
+      await refreshAll();
+    } catch (err: any) {
+      setErrorMsg(err.message || "Couldn't save your habit.");
+    } finally {
+      setHabitSaving(false);
+    }
+  }
+
+  async function removeHabit(habitId: string) {
+    if (!window.confirm("Delete this habit? It will be archived for your history and dashboard.")) {
+      return;
+    }
+
+    try {
+      await api.deleteHabit(habitId);
+      await refreshAll();
+    } catch (err: any) {
+      setErrorMsg(err.message || "Couldn't delete that habit.");
     }
   }
 
@@ -216,23 +276,6 @@ export default function DailyTracker() {
       <Toast message={errorMsg} onDismiss={() => setErrorMsg(null)} />
 
       <div className="app-container">
-        {offlineMode ? (
-          <div
-            className="card"
-            style={{
-              marginTop: 16,
-              padding: "10px 12px",
-              borderColor: "rgba(245,151,61,0.32)",
-              background: "rgba(245,151,61,0.08)",
-            }}
-          >
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ember-500)" }}>Offline demo mode</div>
-            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>
-              The backend is unavailable right now, so you can still browse the experience with sample data.
-            </div>
-          </div>
-        ) : null}
-
         <Header greetingName={greetingName} streak={streak} onSignOut={handleSignOut} />
 
         <div className="app-rail">
@@ -278,13 +321,119 @@ export default function DailyTracker() {
             >
               {view === "today" && (
                 <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, color: "var(--text-dim)" }}>
+                      {HABITS.length} active {HABITS.length === 1 ? "habit" : "habits"}
+                    </div>
+                    <button className="btn btn-primary" type="button" onClick={openNewHabitForm}>
+                      + Add habit
+                    </button>
+                  </div>
+
+                  {showHabitForm && (
+                    <form className="card" onSubmit={submitHabitForm} style={{ padding: 16, marginBottom: 12 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                        <strong>{editingHabitId ? "Edit habit" : "Create habit"}</strong>
+                        <button type="button" className="btn btn-ghost" onClick={() => setShowHabitForm(false)}>
+                          Close
+                        </button>
+                      </div>
+
+                      <div style={{ display: "grid", gap: 10 }}>
+                        <input
+                          className="input"
+                          placeholder="Habit name"
+                          value={habitForm.label}
+                          onChange={(e) => setHabitForm((prev: any) => ({ ...prev, label: e.target.value }))}
+                        />
+                        <textarea
+                          className="input"
+                          placeholder="Description"
+                          value={habitForm.detail}
+                          onChange={(e) => setHabitForm((prev: any) => ({ ...prev, detail: e.target.value }))}
+                          style={{ minHeight: 88, resize: "vertical" }}
+                        />
+                        <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: 8 }}>
+                          <input
+                            className="input"
+                            placeholder="Icon"
+                            value={habitForm.icon}
+                            onChange={(e) => setHabitForm((prev: any) => ({ ...prev, icon: e.target.value }))}
+                          />
+                          <input
+                            className="input"
+                            placeholder="Category"
+                            value={habitForm.category}
+                            onChange={(e) => setHabitForm((prev: any) => ({ ...prev, category: e.target.value }))}
+                          />
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                          <select
+                            className="input"
+                            value={habitForm.frequency}
+                            onChange={(e) => setHabitForm((prev: any) => ({ ...prev, frequency: e.target.value }))}
+                          >
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="custom">Custom</option>
+                          </select>
+                          <input
+                            className="input"
+                            type="date"
+                            value={habitForm.start_date}
+                            onChange={(e) => setHabitForm((prev: any) => ({ ...prev, start_date: e.target.value }))}
+                          />
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                          <input
+                            className="input"
+                            type="number"
+                            min="0"
+                            placeholder="Target"
+                            value={habitForm.target}
+                            onChange={(e) => setHabitForm((prev: any) => ({ ...prev, target: e.target.value }))}
+                          />
+                          <input
+                            className="input"
+                            placeholder="Unit"
+                            value={habitForm.unit}
+                            onChange={(e) => setHabitForm((prev: any) => ({ ...prev, unit: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
+                        <button type="button" className="btn btn-ghost" onClick={() => setShowHabitForm(false)}>
+                          Cancel
+                        </button>
+                        <button type="submit" className="btn btn-primary" disabled={habitSaving}>
+                          {habitSaving ? "Saving..." : editingHabitId ? "Save changes" : "Create habit"}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
                   {HABITS.length === 0 ? (
                     <div className="card" style={{ padding: 16, textAlign: "center", color: "var(--text-dim)" }}>
-                      No habits are available yet. Add or update them in the database so the API can return them here.
+                      <div style={{ fontWeight: 700, marginBottom: 8, color: "var(--text)" }}>You don’t have any habits yet.</div>
+                      <div style={{ marginBottom: 12 }}>Create your first habit to get started.</div>
+                      <button className="btn btn-primary" type="button" onClick={openNewHabitForm}>Add your first habit</button>
                     </div>
                   ) : (
                     HABITS.map((h: any) => (
-                      <HabitCard key={h.id} habit={h} done={!!(h.completed ?? h.done)} onToggle={() => toggle(h.id)} />
+                      <div key={h.id} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <div style={{ flex: 1 }}>
+                          <HabitCard key={h.id} habit={h} done={!!(h.completed ?? h.done)} onToggle={() => toggle(h.id)} />
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          <button type="button" className="btn btn-ghost" onClick={() => openEditHabitForm(h)} style={{ minWidth: 0, padding: "8px 10px" }}>
+                            Edit
+                          </button>
+                          <button type="button" className="btn btn-ghost" onClick={() => removeHabit(h.id)} style={{ minWidth: 0, padding: "8px 10px", color: "#fca5a5" }}>
+                            Delete
+                          </button>
+                        </div>
+                      </div>
                     ))
                   )}
                   <ReflectionPanel value={reflectionText} onChange={setReflectionText} onSave={saveReflection} />

@@ -39,6 +39,11 @@ export interface HabitClientPayload {
   label: string;
   detail: string | null;
   is_active: boolean;
+  category: string | null;
+  frequency: string;
+  target: number | null;
+  unit: string | null;
+  start_date: string | null;
 }
 
 export interface DailyLog {
