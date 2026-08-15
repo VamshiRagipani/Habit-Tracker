@@ -10,6 +10,15 @@ export async function getHabits(req: Request, res: Response, next: NextFunction)
   }
 }
 
+export async function getHabit(req: Request, res: Response, next: NextFunction) {
+  try {
+    const habit = await habitsService.getHabitById(req.supabase!, req.user!.id, req.params.id);
+    res.json({ habit: habitsService.serializeHabitForClient(habit) });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function postHabit(req: Request, res: Response, next: NextFunction) {
   try {
     const habit = await habitsService.createHabit(req.supabase!, req.user!.id, req.body);

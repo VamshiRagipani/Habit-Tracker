@@ -70,8 +70,15 @@ button {
 }
 
 textarea,
-input {
+input,
+select {
   font-family: inherit;
+}
+
+textarea.input,
+input.input,
+select.input {
+  box-sizing: border-box;
 }
 
 ::selection {

@@ -23,6 +23,47 @@ const DEFAULT_HABIT_DEFINITIONS = [
 
 const LEGACY_HABIT_KEYS = new Set(["phone_lock", "focus_block", "notif_off", "no_binge", "needle", "gym"]);
 
+export function buildHabitKey(value: string) {
+  const compose = (value ?? "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return compose || "habit";
+}
+
+export function normalizeHabitPayload(input: Record<string, any> = {}) {
+  const label = String(input.label ?? input.title ?? "").trim();
+  const detail = String(input.detail ?? "").trim();
+  const icon = String(input.icon ?? "").trim() || "✅";
+  const phase = Number.isFinite(Number(input.phase)) ? Number(input.phase) : 1;
+  const sort_order = Number.isFinite(Number(input.sort_order)) ? Number(input.sort_order) : 0;
+  const category = String(input.category ?? "").trim();
+  const frequency = String(input.frequency ?? "daily").trim() || "daily";
+  const targetValue = input.target == null || input.target === "" ? null : Number(input.target);
+  const unit = String(input.unit ?? "").trim();
+  const startDate = String(input.start_date ?? new Date().toISOString().slice(0, 10)).trim();
+  const habitKey = String(input.habit_key ?? buildHabitKey(label || "custom habit")).trim() || buildHabitKey(label || "custom habit");
+
+  const normalized: Record<string, any> = {
+    habit_key: habitKey,
+    icon,
+    phase,
+    sort_order,
+    category: category || null,
+    frequency,
+    target: Number.isFinite(targetValue) ? Number(targetValue) : null,
+    unit: unit || null,
+    start_date: startDate,
+  };
+
+  if (label) normalized.label = label;
+  if (detail) normalized.detail = detail;
+
+  return normalized;
+}
+
 async function ensureDefaultHabitsForUser(supabase: SupabaseClient, userId: string) {
   const { data: existingHabits, error: fetchError } = await supabase
     .from("habits")
@@ -79,11 +120,29 @@ export function serializeHabitForClient(habit: any, completed = false): HabitCli
     label: habit.label,
     detail: habit.detail,
     is_active: habit.is_active,
+    category: habit.category ?? null,
+    frequency: habit.frequency ?? "daily",
+    target: habit.target ?? null,
+    unit: habit.unit ?? null,
+    start_date: habit.start_date ?? null,
   };
 }
 
 export function serializeHabitsForClient(habits: any[], completedIds: Set<string> = new Set()) {
   return habits.map((habit) => serializeHabitForClient(habit, completedIds.has(habit.id)));
+}
+
+export async function getHabitById(supabase: SupabaseClient, userId: string, id: string) {
+  const { data, error } = await supabase
+    .from("habits")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) throw new ApiError(500, error.message);
+  if (!data) throw new ApiError(404, "Habit not found");
+  return data;
 }
 
 export async function listHabits(supabase: SupabaseClient, userId: string) {
@@ -100,9 +159,15 @@ export async function listHabits(supabase: SupabaseClient, userId: string) {
 }
 
 export async function createHabit(supabase: SupabaseClient, userId: string, payload: any) {
+  const normalized = normalizeHabitPayload({
+    ...payload,
+    label: payload?.label ?? payload?.title ?? "New Habit",
+    habit_key: payload?.habit_key ?? buildHabitKey(payload?.label ?? payload?.title ?? "New Habit"),
+  });
+
   const { data, error } = await supabase
     .from("habits")
-    .insert({ ...payload, user_id: userId })
+    .insert({ ...normalized, user_id: userId })
     .select()
     .single();
   if (error) throw new ApiError(400, error.message);
@@ -115,9 +180,10 @@ export async function updateHabit(
   id: string,
   payload: any
 ) {
+  const normalized = normalizeHabitPayload(payload);
   const { data, error } = await supabase
     .from("habits")
-    .update(payload)
+    .update(normalized)
     .eq("id", id)
     .eq("user_id", userId)
     .select()

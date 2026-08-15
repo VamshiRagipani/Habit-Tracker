@@ -77,10 +77,15 @@ export const api = {
   // Habits (CRUD)
   getHabits: () => authedFetch("/api/habits"),
   createHabit: (payload: {
-    habit_key: string;
+    habit_key?: string;
     icon?: string;
     label: string;
     detail?: string;
+    category?: string;
+    frequency?: string;
+    target?: number | null;
+    unit?: string;
+    start_date?: string;
     phase?: number;
     sort_order?: number;
   }) =>
